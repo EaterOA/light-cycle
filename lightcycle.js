@@ -39,10 +39,13 @@ window.onload = function init()
     // Enable shader attributes
     var positionLocation = gl.getAttribLocation(program, "vPosition");
     gl.enableVertexAttribArray(positionLocation);
+    var texCoordLocation = gl.getAttribLocation(program, "vTexCoord");
+    gl.enableVertexAttribArray(texCoordLocation);
 
     // Other set up
     aspect = canvas.width / canvas.height;
     addEventListener("keydown", handleKey);
+    setUniform(gl.uniform1i, "texture", 0);
 
     // First frame
     requestAnimFrame(render);
@@ -74,17 +77,35 @@ World.prototype.update = function(time)
 
 function initializeGeometry()
 {
-    var shape, buffer;
+    var geo, shape, image;
 
     geometry = {};
 
-    geometry.wall = {};
-    shape = makeCube();
-    buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    geo = geometry.wall = {};
+    shape = makeCube(5);
+    geo.vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
-    geometry.wall.numVertices = shape[0].length;
-    geometry.wall.vertexBuffer = buffer;
+    geo.numVertices = shape[0].length;
+    geo.texture = gl.createTexture();
+    image = document.getElementById("wallTexture");
+    configureTexture(geo.texture, image);
+    geo.texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[1]), gl.STATIC_DRAW);
+    geo.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
+    geo.textureMagFilter = gl.LINEAR;
+}
+
+function configureTexture(texture, image)
+{
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB,
+        gl.RGB, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 }
 
 /*
@@ -97,10 +118,10 @@ function makeCube(zoom)
     // Texture coordinates are vec2 + a homogeneous coordinate, so they can be
     // transformed as well
     var texCorners = [
-        vec3(0, 0, 1.0),
-        vec3(0, zoom, 1.0),
-        vec3(zoom, zoom, 1.0),
-        vec3(zoom, 0, 1.0)
+        vec2(0, 0),
+        vec2(0, zoom),
+        vec2(zoom, zoom),
+        vec2(zoom, 0)
     ];
     var corners = [
         vec4(0, 0, 1),
@@ -206,6 +227,17 @@ function render(time)
             scaleMatrix[i][i] = obj.size[i];
         model = mult(model, scaleMatrix);
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
+
+        // Switch texCoord buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
+        setVertexAttribPointer("vTexCoord", 2);
+
+        // Configure texture settings
+        gl.bindTexture(gl.TEXTURE_2D, geo.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+            geo.textureMinFilter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,
+            geo.textureMagFilter);
 
         gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
     }
