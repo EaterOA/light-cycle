@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf8"></meta>
+</head>
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+
+uniform mat4 vModel;
+uniform mat4 vView;
+uniform mat4 vProjection;
+
+void main()
+{
+    gl_Position = vProjection * vView * vModel * vPosition;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+void main()
+{
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+</script>
+
+<script type="text/javascript" src="Common/webgl-utils.js"></script>
+<script type="text/javascript" src="Common/initShaders.js"></script>
+<script type="text/javascript" src="Common/MV.js"></script>
+<script type="text/javascript" src="lightcycle.js"></script>
+
+<body>
+<canvas id="gl-canvas" width="960" height="540"></canvas>
+</body>
+</html>
