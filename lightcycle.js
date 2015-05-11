@@ -4,9 +4,9 @@ var program;
 
 // Bookkeeping and presets
 var aspect = 1.0;
-var objects = {};
 
 // State variables
+var world;
 var cameraPosition = [0, 10, 20];
 var cameraX = 0;
 var cameraY = -20;
@@ -31,8 +31,8 @@ window.onload = function init()
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
-    // Create game objects
-    initObjects();
+    // Create game world / logic controller
+    world = new World();
 
     // Enable shader attributes
     var positionLocation = gl.getAttribLocation(program, "vPosition");
@@ -46,11 +46,14 @@ window.onload = function init()
     requestAnimFrame(render);
 }
 
-function initObjects()
+var World = function()
 {
-    var obj, geometry;
+    this.currentTime = 0;
+    this.objects = [];
 
-    obj = objects["test"] = {};
+    var obj = {};
+    obj.size = 3.0;
+    obj.position = [0.0, 0.0, -1.0];
     obj.numVertices = 3;
     obj.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, obj.vertexBuffer);
@@ -58,8 +61,19 @@ function initObjects()
                 vec4(0,0,0,1),
                 vec4(1,0,0,1)];
     gl.bufferData(gl.ARRAY_BUFFER, flatten(geometry), gl.STATIC_DRAW);
-    obj.size = 3.0;
-    obj.position = [0.0, 0.0, -1.0];
+    this.objects.push(obj);
+}
+
+World.prototype.update = function(time)
+{
+    time /= 1000.0;
+    var elapsed = time - this.currentTime;
+    this.currentTime = time;
+
+    for (var i = 0; i < this.objects.length; i++) {
+        var obj = this.objects[i];
+        //noop
+    }
 }
 
 /*
@@ -104,10 +118,10 @@ function updateProjection(usePerspective)
     setUniform(gl.uniformMatrix4fv, "vProjection", flatten(projection));
 }
 
-function render(duration)
+function render(time)
 {
     // Update game state
-    tick(duration);
+    world.update(time);
 
     // Clear screen
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -121,9 +135,8 @@ function render(duration)
     updateProjection(true);
 
     // Draw game objects
-    for (var key in objects) {
-        if (!objects.hasOwnProperty(key)) continue;
-        var obj = objects[key];
+    for (var i = 0; i < world.objects.length; i++) {
+        var obj = world.objects[i];
 
         // Switch vertex buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, obj.vertexBuffer);
@@ -143,16 +156,6 @@ function render(duration)
 
     // Ask the browser to schedule next frame for us
     requestAnimFrame(render);
-}
-
-function tick(duration)
-{
-    for (var key in objects) {
-        if (!objects.hasOwnProperty(key)) continue;
-        var obj = objects[key];
-
-        // noop
-    }
 }
 
 function handleKey(e)
