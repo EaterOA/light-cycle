@@ -2,11 +2,10 @@
 var gl;
 var program;
 
-// Bookkeeping and presets
-var aspect = 1.0;
-
 // State variables
 var world;
+var geometry;
+var aspect = 1.0;
 var cameraPosition = [0, 10, 20];
 var cameraX = 0;
 var cameraY = -20;
@@ -34,6 +33,9 @@ window.onload = function init()
     // Create game world / logic controller
     world = new World();
 
+    //
+    initializeGeometry();
+
     // Enable shader attributes
     var positionLocation = gl.getAttribLocation(program, "vPosition");
     gl.enableVertexAttribArray(positionLocation);
@@ -52,15 +54,9 @@ var World = function()
     this.objects = [];
 
     var obj = {};
-    obj.size = 3.0;
-    obj.position = [0.0, 0.0, -1.0];
-    obj.numVertices = 3;
-    obj.vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, obj.vertexBuffer);
-    geometry = [vec4(0,1,0,1),
-                vec4(0,0,0,1),
-                vec4(1,0,0,1)];
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(geometry), gl.STATIC_DRAW);
+    obj.type = "wall";
+    obj.position = [-5.0, 0.0, 0.0];
+    obj.size = [10.0, 1.0, -10.0];
     this.objects.push(obj);
 }
 
@@ -74,6 +70,65 @@ World.prototype.update = function(time)
         var obj = this.objects[i];
         //noop
     }
+}
+
+function initializeGeometry()
+{
+    var shape, buffer;
+
+    geometry = {};
+
+    geometry.wall = {};
+    shape = makeCube();
+    buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
+    geometry.wall.numVertices = shape[0].length;
+    geometry.wall.vertexBuffer = buffer;
+}
+
+/*
+Creates a cube by providing its vertices and texture coordinates
+*/
+function makeCube(zoom)
+{
+    var vertices = [], texCoords = [];
+
+    // Texture coordinates are vec2 + a homogeneous coordinate, so they can be
+    // transformed as well
+    var texCorners = [
+        vec3(0, 0, 1.0),
+        vec3(0, zoom, 1.0),
+        vec3(zoom, zoom, 1.0),
+        vec3(zoom, 0, 1.0)
+    ];
+    var corners = [
+        vec4(0, 0, 1),
+        vec4(0, 1, 1),
+        vec4(1, 1, 1),
+        vec4(1, 0, 1),
+        vec4(0, 0, 0),
+        vec4(0, 1, 0),
+        vec4(1, 1, 0),
+        vec4(1, 0, 0)
+    ];
+    function quad(a, b, c, d) {
+        vIdx = [a, b, c, c, d, a];
+        tIdx = [1, 0, 3, 3, 2, 1];
+        for (var i = 0; i < vIdx.length; i++) {
+            vertices.push(corners[vIdx[i]]);
+            texCoords.push(texCorners[tIdx[i]]);
+        }
+    }
+
+    quad(1, 0, 3, 2);
+    quad(4, 0, 1, 5);
+    quad(6, 2, 3, 7);
+    quad(4, 5, 6, 7);
+    quad(5, 1, 2, 6);
+    quad(0, 4, 7, 3);
+
+    return [vertices, texCoords];
 }
 
 /*
@@ -137,9 +192,10 @@ function render(time)
     // Draw game objects
     for (var i = 0; i < world.objects.length; i++) {
         var obj = world.objects[i];
+        var geo = geometry[obj.type];
 
         // Switch vertex buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, obj.vertexBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
         setVertexAttribPointer("vPosition", 4);
 
         // Set model transform
@@ -147,11 +203,11 @@ function render(time)
         model = mult(model, translate(obj.position));
         var scaleMatrix = mat4();
         for (var i = 0; i < 3; i++)
-            scaleMatrix[i][i] = obj.size;
+            scaleMatrix[i][i] = obj.size[i];
         model = mult(model, scaleMatrix);
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
-        gl.drawArrays(gl.TRIANGLES, 0, obj.numVertices);
+        gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
     }
 
     // Ask the browser to schedule next frame for us
