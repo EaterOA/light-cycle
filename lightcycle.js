@@ -23,8 +23,16 @@ window.onload = function init()
 
     // Configure high-level gl settings
     gl.enable(gl.DEPTH_TEST);
-    gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+    var displayHeight = canvas.clientHeight;
+    var displayWidth = canvas.clientWidth;
+    if (displayHeight != canvas.height)
+        canvas.height = displayHeight;
+    if (displayWidth != canvas.width)
+        canvas.width = displayWidth;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+
 
     // Compile shaders
     program = initShaders(gl, "vertex-shader", "fragment-shader");
