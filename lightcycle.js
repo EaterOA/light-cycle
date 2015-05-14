@@ -149,6 +149,7 @@ function initializeGeometry()
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
     geo.numVertices = shape[0].length;
+    geo.center = [0.5, 0.5, 0.5];
 }
 
 function configureTexture(texture, image)
@@ -214,14 +215,17 @@ function render(time)
     // Adjust camera view to player
     if (world.player) {
         var p = world.player;
-        cameraPosition = world.player.position;
+        cameraPosition = p.position.slice();
+        var geo = geometry[p.type];
+        for (var i = 0; i < p.size.length; i++)
+            cameraPosition[i] += geo.center[i] * p.size[i];
         cameraY = 270 - ufoDir*90;
 
         var view = mat4();
         view = mult(view, translate(negate([0, 2.5, 17])));
         view = mult(view, rotate(-cameraX, [1, 0, 0]));
         view = mult(view, rotate(-cameraY, [0, 1, 0]));
-        view = mult(view, translate(negate(p.position)));
+        view = mult(view, translate(negate(cameraPosition)));
         setUniform(gl.uniformMatrix4fv, "vView", flatten(view));
     }
     // Free camera
