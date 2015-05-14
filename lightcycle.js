@@ -6,9 +6,9 @@ var program;
 var world;
 var geometry;
 var aspect = 1.0;
-var cameraPosition = [0, 10, 20];
-var cameraX = 0;
-var cameraY = -20;
+var cameraPosition = [1, 10, 20];
+var cameraX = -20;
+var cameraY = 0;
 var cameraFov = 50;
 var cameraAttached = null;
 
@@ -206,8 +206,8 @@ function updateView(followCamera)
     // Setting this to false essentially disables the camera transformation
     // This can be useful for displaying e.g. the HUD
     if (followCamera) {
-        view = mult(view, rotate(-cameraY, [1, 0, 0]));
-        view = mult(view, rotate(-cameraX, [0, 1, 0]));
+        view = mult(view, rotate(-cameraX, [1, 0, 0]));
+        view = mult(view, rotate(-cameraY, [0, 1, 0]));
         view = mult(view, translate(negate(cameraPosition)));
     }
 
@@ -331,10 +331,10 @@ function render(time)
 function handleKey(e)
 {
     if (e.keyCode == 37) { // left
-        cameraX += 1;
+        cameraY += 1;
     }
     else if (e.keyCode == 39) { // right
-        cameraX += -1;
+        cameraY += -1;
     }
     else if (e.keyCode == 38) { // up
         cameraPosition[1] += 1;
@@ -343,23 +343,40 @@ function handleKey(e)
         cameraPosition[1] += -1;
     }
     else if (e.keyCode == 87) { // w
-        cameraPosition[2] += -1;
+        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 0, -1));
+        cameraPosition = add(cameraPosition, dir.slice(0,3));
     }
     else if (e.keyCode == 65) { // a
-        cameraPosition[0] += -1;
+        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(-1, 0, 0));
+        cameraPosition = add(cameraPosition, dir.slice(0,3));
     }
     else if (e.keyCode == 83) { // s
-        cameraPosition[2] += 1;
+        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 0, 1));
+        cameraPosition = add(cameraPosition, dir.slice(0,3));
     }
     else if (e.keyCode == 68) { // d
-        cameraPosition[0] += 1;
+        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(1, 0, 0));
+        cameraPosition = add(cameraPosition, dir.slice(0,3));
     }
     else if (e.keyCode == 90) { // z
-        cameraY += 1;
+        cameraX += 1;
     }
     else if (e.keyCode == 88) { // x
-        cameraY += -1;
+        cameraX += -1;
     }
+}
+
+// applies mat to vec
+function transform(mat, vec)
+{
+    var res = [];
+    for (var i = 0; i < mat.length; i++) {
+        var sum = 0.0;
+        for (var j = 0; j < vec.length; j++)
+            sum += mat[i][j] * vec[j];
+        res.push(sum);
+    }
+    return res;
 }
 
 function setUniform(setterFn, key, value)
