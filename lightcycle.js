@@ -7,10 +7,9 @@ var world;
 var geometry;
 var aspect = 1.0;
 var cameraPosition = [1, 10, 20];
-var cameraX = -20;
+var cameraX = -12;
 var cameraY = 0;
 var cameraFov = 50;
-var cameraAttached = null;
 var arenaDimX = 1000;
 var arenaDimZ = 1000;
 var ufoDir = 0;
@@ -68,6 +67,8 @@ var World = function()
     ufotable.position = [0.0, 4.0, 5.0];
     ufotable.size = [1.0, 1.0, 1.0];
     this.objects.push(ufotable);
+
+    this.player = ufotable;
 }
 
 World.prototype.update = function(time)
@@ -117,27 +118,6 @@ World.prototype.update = function(time)
                 }
             }
             
-            cameraPosition = [obj.position[0], 10, obj.position[2]];
-            if (ufoDir == 0)
-            {
-                cameraPosition[0] -= 10.0;
-                cameraY = 270;
-            }
-            else if (ufoDir == 1)
-            {
-                cameraPosition[2] -= 10.0;
-                cameraY = 180;
-            }
-            else if (ufoDir == 2)
-            {
-                cameraPosition[0] += 10.0;
-                cameraY = 90;
-            }
-            else
-            {
-                cameraPosition[2] += 10.0;
-                cameraY = 0;
-            }
         }
     }
 }
@@ -169,16 +149,6 @@ function initializeGeometry()
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
     geo.numVertices = shape[0].length;
-    /*
-    geo.texture = gl.createTexture();
-    image = document.getElementById("arenaTexture");
-    configureTexture(geo.texture, image);
-    geo.texCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[1]), gl.STATIC_DRAW);
-    geo.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
-    geo.textureMagFilter = gl.LINEAR;
-    */
 }
 
 function configureTexture(texture, image)
@@ -233,48 +203,6 @@ function makeCube(zoom)
     return [vertices, texCoords];
 }
 
-/*
-Updates the view (camera) matrix. This controls what objects are placed in
-front of the view and can potentially be seen.
-*/
-function updateView(followCamera)
-{
-    var view = mat4();
-
-    // Setting this to false essentially disables the camera transformation
-    // This can be useful for displaying e.g. the HUD
-    if (followCamera) {
-        view = mult(view, rotate(-cameraX, [1, 0, 0]));
-        view = mult(view, rotate(-cameraY, [0, 1, 0]));
-        view = mult(view, translate(negate(cameraPosition)));
-    }
-
-    setUniform(gl.uniformMatrix4fv, "vView", flatten(view));
-}
-
-/*
-Updates the projection matrix, which brings visible objects into clip space.
-*/
-function updateProjection(usePerspective)
-{
-    var projection;
-
-    // usePerspective determines whether to use perspective projection or
-    // orthographic projection
-    if (usePerspective) {
-        // Convert horizontal field of view to vertical
-        var fovy = Math.atan(Math.tan(radians(cameraFov / 2)) / aspect);
-        fovy = fovy * 180 / Math.PI * 2;
-        projection = perspective(fovy, aspect, 1, 5000);
-    }
-    else {
-        var range = 20;
-        projection = ortho(-range*aspect, range*aspect, -range, range, 1, 100);
-    }
-
-    setUniform(gl.uniformMatrix4fv, "vProjection", flatten(projection));
-}
-
 function render(time)
 {
     // Update game state
@@ -283,13 +211,33 @@ function render(time)
     // Clear screen
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Adjust camera
-    if (cameraAttached)
-        cameraPosition = cameraAttachedObject.position;
+    // Adjust camera view to player
+    if (world.player) {
+        var p = world.player;
+        cameraPosition = world.player.position;
+        cameraY = 270 - ufoDir*90;
 
-    // Adjust view and projection
-    updateView(true);
-    updateProjection(true);
+        var view = mat4();
+        view = mult(view, translate(negate([0, 2.5, 17])));
+        view = mult(view, rotate(-cameraX, [1, 0, 0]));
+        view = mult(view, rotate(-cameraY, [0, 1, 0]));
+        view = mult(view, translate(negate(p.position)));
+        setUniform(gl.uniformMatrix4fv, "vView", flatten(view));
+    }
+    // Free camera
+    else {
+        var view = mat4();
+        view = mult(view, rotate(-cameraX, [1, 0, 0]));
+        view = mult(view, rotate(-cameraY, [0, 1, 0]));
+        view = mult(view, translate(negate(cameraPosition)));
+        setUniform(gl.uniformMatrix4fv, "vView", flatten(view));
+    }
+
+    // Adjust projection
+    var fovy = Math.atan(Math.tan(radians(cameraFov / 2)) / aspect);
+    fovy = fovy * 180 / Math.PI * 2;
+    projection = perspective(fovy, aspect, 1, 5000);
+    setUniform(gl.uniformMatrix4fv, "vProjection", flatten(projection));
 
     // Other misc settings
     toggleAttrib("vPosition", true);
