@@ -62,8 +62,10 @@ window.onload = function init()
 var World = function()
 {
     this.currentTime = 0;
+    this.arena = [1000, 1000];
     this.objects = [];
 
+/*
     var obj = {};
     obj.type = "wall";
     obj.position = [-5.0, 0.0, 0.0];
@@ -75,6 +77,7 @@ var World = function()
     ufotable.position = [0.0, 4.0, -5.0];
     ufotable.size = [1.0, 1.0, 1.0];
     this.objects.push(ufotable);
+*/
 }
 
 World.prototype.update = function(time)
@@ -95,14 +98,14 @@ function initializeGeometry()
 
     geometry = {};
 
-    geo = geometry.wall = {};
-    shape = makeCube(5);
+    geo = geometry.arena = {};
+    shape = makeCube(100);
     geo.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
     geo.numVertices = shape[0].length;
     geo.texture = gl.createTexture();
-    image = document.getElementById("wallTexture");
+    image = document.getElementById("arenaTexture");
     configureTexture(geo.texture, image);
     geo.texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
@@ -139,9 +142,6 @@ function configureTexture(texture, image)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 }
 
-/*
-Creates a cube by providing its vertices and texture coordinates
-*/
 function makeCube(zoom)
 {
     var vertices = [], texCoords = [];
@@ -164,6 +164,18 @@ function makeCube(zoom)
         vec4(1, 1, 0),
         vec4(1, 0, 0)
     ];
+    /*
+    var corners = [
+        vec4(-0.5, -0.5,  0.5, 1.0),
+        vec4(-0.5,  0.5,  0.5, 1.0),
+        vec4(0.5,  0.5,  0.5, 1.0),
+        vec4(0.5, -0.5,  0.5, 1.0),
+        vec4(-0.5, -0.5, -0.5, 1.0),
+        vec4(-0.5,  0.5, -0.5, 1.0),
+        vec4(0.5,  0.5, -0.5, 1.0),
+        vec4(0.5, -0.5, -0.5, 1.0)
+    ];
+    */
     function quad(a, b, c, d) {
         vIdx = [a, b, c, c, d, a];
         tIdx = [1, 0, 3, 3, 2, 1];
@@ -215,7 +227,7 @@ function updateProjection(usePerspective)
         // Convert horizontal field of view to vertical
         var fovy = Math.atan(Math.tan(radians(cameraFov / 2)) / aspect);
         fovy = fovy * 180 / Math.PI * 2;
-        projection = perspective(fovy, aspect, 1, 1000);
+        projection = perspective(fovy, aspect, 1, 5000);
     }
     else {
         var range = 20;
@@ -240,6 +252,45 @@ function render(time)
     // Adjust view and projection
     updateView(true);
     updateProjection(true);
+
+    // Draw game arena
+    {
+        var geo = geometry.arena;
+
+        // Switch vertex buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
+        setVertexAttribPointer("vPosition", 4);
+
+        // Switch texCoord buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
+        setVertexAttribPointer("vTexCoord", 2);
+
+        // Configure texture settings
+        gl.bindTexture(gl.TEXTURE_2D, geo.texture);
+        /*
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+            geo.textureMinFilter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,
+            geo.textureMagFilter);
+        */
+        var ext = (
+            gl.getExtension('EXT_texture_filter_anisotropic') ||
+            gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+            gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+        );
+        if (ext){
+            var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+            gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
+        }
+
+        // Set model transform
+        var model, scaleMatrix;
+        model = mat4();
+        model = mult(model, scale(world.arena[0], 1000, world.arena[1]));
+        setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
+
+        gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
+    }
 
     // Draw game objects
     for (var i = 0; i < world.objects.length; i++) {
