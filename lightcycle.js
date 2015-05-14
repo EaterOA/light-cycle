@@ -354,6 +354,12 @@ function handleKey(e)
     else if (e.keyCode == 68) { // d
         cameraPosition[0] += 1;
     }
+    else if (e.keyCode == 90) { // z
+        cameraY += 1;
+    }
+    else if (e.keyCode == 88) { // x
+        cameraY += -1;
+    }
 }
 
 function setUniform(setterFn, key, value)
