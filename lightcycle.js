@@ -44,12 +44,6 @@ window.onload = function init()
     //
     initializeGeometry();
 
-    // Enable shader attributes
-    var positionLocation = gl.getAttribLocation(program, "vPosition");
-    gl.enableVertexAttribArray(positionLocation);
-    var texCoordLocation = gl.getAttribLocation(program, "vTexCoord");
-    gl.enableVertexAttribArray(texCoordLocation);
-
     // Other set up
     aspect = canvas.width / canvas.height;
     addEventListener("keydown", handleKey);
@@ -111,6 +105,7 @@ function initializeGeometry()
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
     geo.numVertices = shape[0].length;
+    /*
     geo.texture = gl.createTexture();
     image = document.getElementById("arenaTexture");
     configureTexture(geo.texture, image);
@@ -119,6 +114,7 @@ function initializeGeometry()
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[1]), gl.STATIC_DRAW);
     geo.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
     geo.textureMagFilter = gl.LINEAR;
+    */
 }
 
 function configureTexture(texture, image)
@@ -154,18 +150,6 @@ function makeCube(zoom)
         vec4(1, 1, 0),
         vec4(1, 0, 0)
     ];
-    /*
-    var corners = [
-        vec4(-0.5, -0.5,  0.5, 1.0),
-        vec4(-0.5,  0.5,  0.5, 1.0),
-        vec4(0.5,  0.5,  0.5, 1.0),
-        vec4(0.5, -0.5,  0.5, 1.0),
-        vec4(-0.5, -0.5, -0.5, 1.0),
-        vec4(-0.5,  0.5, -0.5, 1.0),
-        vec4(0.5,  0.5, -0.5, 1.0),
-        vec4(0.5, -0.5, -0.5, 1.0)
-    ];
-    */
     function quad(a, b, c, d) {
         vIdx = [a, b, c, c, d, a];
         tIdx = [1, 0, 3, 3, 2, 1];
@@ -243,26 +227,27 @@ function render(time)
     updateView(true);
     updateProjection(true);
 
+    // Other misc settings
+    toggleAttrib("vPosition", true);
+
     // Draw game arena
     {
         var geo = geometry.arena;
 
         // Switch vertex buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
-        setVertexAttribPointer("vPosition", 4);
+        setAttrib("vPosition", 4);
+
+        // Turn on textures
+        toggleAttrib("vTexCoord", true);
+        setUniform(gl.uniform1i, "useTexture", true);
 
         // Switch texCoord buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
-        setVertexAttribPointer("vTexCoord", 2);
+        setAttrib("vTexCoord", 2);
 
         // Configure texture settings
         gl.bindTexture(gl.TEXTURE_2D, geo.texture);
-        /*
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
-            geo.textureMinFilter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,
-            geo.textureMagFilter);
-        */
         var ext = (
             gl.getExtension('EXT_texture_filter_anisotropic') ||
             gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
@@ -289,7 +274,7 @@ function render(time)
 
         // Switch vertex buffer
         gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
-        setVertexAttribPointer("vPosition", 4);
+        setAttrib("vPosition", 4);
 
         // Set model transform
         var model = mat4();
@@ -300,16 +285,25 @@ function render(time)
         model = mult(model, scaleMatrix);
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
-        // Switch texCoord buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
-        setVertexAttribPointer("vTexCoord", 2);
+        if (geo.texture) {
+            toggleAttrib("vTexCoord", true);
+            setUniform(gl.uniform1i, "useTexture", true);
 
-        // Configure texture settings
-        gl.bindTexture(gl.TEXTURE_2D, geo.texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
-            geo.textureMinFilter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,
-            geo.textureMagFilter);
+            // Switch texCoord buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
+            setAttrib("vTexCoord", 2);
+
+            // Configure texture settings
+            gl.bindTexture(gl.TEXTURE_2D, geo.texture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
+                geo.textureMinFilter);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,
+                geo.textureMagFilter);
+        }
+        else {
+            toggleAttrib("vTexCoord", false);
+            setUniform(gl.uniform1i, "useTexture", false);
+        }
 
         gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
     }
@@ -380,8 +374,17 @@ function setUniform(setterFn, key, value)
     }
 }
 
-function setVertexAttribPointer(key, value)
+function setAttrib(key, value)
 {
     var loc = gl.getAttribLocation(program, key);
     gl.vertexAttribPointer(loc, value, gl.FLOAT, false, 0, 0);
+}
+
+function toggleAttrib(key, enable)
+{
+    var loc = gl.getAttribLocation(program, key);
+    if (enable)
+        gl.enableVertexAttribArray(loc);
+    else
+        gl.disableVertexAttribArray(loc);
 }

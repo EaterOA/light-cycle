@@ -10,6 +10,7 @@ attribute vec2 vTexCoord;
 uniform mat4 vModel;
 uniform mat4 vView;
 uniform mat4 vProjection;
+uniform bool useTexture;
 
 varying vec2 fTexCoord;
 
@@ -17,7 +18,8 @@ void main()
 {
     gl_Position = vProjection * vView * vModel * vPosition;
 
-    fTexCoord = vTexCoord;
+    if (useTexture)
+        fTexCoord = vTexCoord;
 }
 </script>
 
@@ -27,10 +29,14 @@ precision mediump float;
 varying vec2 fTexCoord;
 
 uniform sampler2D texture;
+uniform bool useTexture;
 
 void main()
 {
-    gl_FragColor = texture2D(texture, fTexCoord);
+    if (useTexture)
+        gl_FragColor = texture2D(texture, fTexCoord);
+    else
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
 </script>
 
