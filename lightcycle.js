@@ -46,7 +46,7 @@ window.onload = function init()
     aspect = canvas.width / canvas.height;
     addEventListener("keydown", handleKey);
     setUniform(gl.uniform1i, "texture", 0);
-
+    
     // First frame
     requestAnimFrame(render);
 }
@@ -61,6 +61,12 @@ var World = function()
     obj.position = [-5.0, 0.0, 0.0];
     obj.size = [10.0, 1.0, -10.0];
     this.objects.push(obj);
+
+    var ufotable = {};
+    ufotable.type = "ufo";
+    ufotable.position = [0.0, 4.0, -5.0];
+    ufotable.size = [1.0, 1.0, 1.0];
+    this.objects.push(ufotable);
 }
 
 World.prototype.update = function(time)
@@ -95,6 +101,23 @@ function initializeGeometry()
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[1]), gl.STATIC_DRAW);
     geo.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
     geo.textureMagFilter = gl.LINEAR;
+
+    var geo2, shape2, image2;
+    geo2 = geometry.ufo = {};
+    shape2 = makeCube(1);
+    geo2.vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo2.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
+    geo2.numVertices = shape2[0].length;
+    geo2.texture = gl.createTexture();
+    image2 = document.getElementById("wallTexture");
+    configureTexture(geo2.texture, image2);
+    geo2.texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo2.texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape2[1]), gl.STATIC_DRAW);
+    geo2.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
+    geo2.textureMagFilter = gl.LINEAR;
+    
 }
 
 function configureTexture(texture, image)
@@ -223,8 +246,8 @@ function render(time)
         var model = mat4();
         model = mult(model, translate(obj.position));
         var scaleMatrix = mat4();
-        for (var i = 0; i < 3; i++)
-            scaleMatrix[i][i] = obj.size[i];
+        for (var ii = 0; ii < 3; ii++)
+            scaleMatrix[ii][ii] = obj.size[ii];
         model = mult(model, scaleMatrix);
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
