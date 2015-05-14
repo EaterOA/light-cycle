@@ -11,6 +11,10 @@ var cameraX = -20;
 var cameraY = 0;
 var cameraFov = 50;
 var cameraAttached = null;
+var arenaDimX = 1000;
+var arenaDimZ = 1000;
+var ufoDir = 0;
+var ufoSpd = 100.0;
 
 window.onload = function init()
 {
@@ -56,12 +60,12 @@ window.onload = function init()
 var World = function()
 {
     this.currentTime = 0;
-    this.arena = [1000, 1000];
+    this.arena = [arenaDimX, arenaDimZ];
     this.objects = [];
 
     var ufotable = {};
     ufotable.type = "ufo";
-    ufotable.position = [0.0, 4.0, -5.0];
+    ufotable.position = [0.0, 4.0, 5.0];
     ufotable.size = [1.0, 1.0, 1.0];
     this.objects.push(ufotable);
 }
@@ -74,7 +78,67 @@ World.prototype.update = function(time)
 
     for (var i = 0; i < this.objects.length; i++) {
         var obj = this.objects[i];
-        //noop
+        if (obj.type == "ufo")
+        {
+            if (ufoDir == 0)
+            {
+                obj.position[0] += elapsed * ufoSpd;
+                if (obj.position[0] > arenaDimX - obj.size[0])
+                {
+                    console.log("Collision");
+                    obj.position[0] = arenaDimX - obj.size[0];
+                }
+            }
+            else if (ufoDir == 1)
+            {
+                obj.position[2] += elapsed * ufoSpd;
+                if (obj.position[2] > arenaDimZ - obj.size[2])
+                {
+                    console.log("Collision");
+                    obj.position[2] = arenaDimZ - obj.size[2];
+                }
+            }
+            else if (ufoDir == 2)
+            {
+                obj.position[0] -= elapsed * ufoSpd;
+                if (obj.position[0] < 0.0)
+                {
+                    console.log("Collision");
+                    obj.position[0] = 0;
+                }
+            }
+            else
+            {
+                obj.position[2] -= elapsed * ufoSpd;
+                if (obj.position[2] < 0.0)
+                {
+                    console.log("Collision");
+                    obj.position[2] = 0;
+                }
+            }
+            
+            cameraPosition = [obj.position[0], 10, obj.position[2]];
+            if (ufoDir == 0)
+            {
+                cameraPosition[0] -= 10.0;
+                cameraY = 270;
+            }
+            else if (ufoDir == 1)
+            {
+                cameraPosition[2] -= 10.0;
+                cameraY = 180;
+            }
+            else if (ufoDir == 2)
+            {
+                cameraPosition[0] += 10.0;
+                cameraY = 90;
+            }
+            else
+            {
+                cameraPosition[2] += 10.0;
+                cameraY = 0;
+            }
+        }
     }
 }
 
@@ -347,6 +411,15 @@ function handleKey(e)
     }
     else if (e.keyCode == 88) { // x
         cameraX += -1;
+    }
+    else if (e.keyCode == 74) { // j
+        ufoDir = (ufoDir + 3) % 4;
+    }
+    else if (e.keyCode == 75) { // k
+        ufoDir = (ufoDir + 1) % 4;
+    }
+    else if (e.keyCode == 80) { // p
+        console.log(cameraPosition);
     }
 }
 
