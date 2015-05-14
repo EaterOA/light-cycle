@@ -65,19 +65,11 @@ var World = function()
     this.arena = [1000, 1000];
     this.objects = [];
 
-/*
-    var obj = {};
-    obj.type = "wall";
-    obj.position = [-5.0, 0.0, 0.0];
-    obj.size = [10.0, 1.0, -10.0];
-    this.objects.push(obj);
-
     var ufotable = {};
     ufotable.type = "ufo";
     ufotable.position = [0.0, 4.0, -5.0];
     ufotable.size = [1.0, 1.0, 1.0];
     this.objects.push(ufotable);
-*/
 }
 
 World.prototype.update = function(time)
@@ -113,22 +105,20 @@ function initializeGeometry()
     geo.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
     geo.textureMagFilter = gl.LINEAR;
 
-    var geo2, shape2, image2;
-    geo2 = geometry.ufo = {};
-    shape2 = makeCube(1);
-    geo2.vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, geo2.vertexBuffer);
+    geo = geometry.ufo = {};
+    shape = makeCube(1);
+    geo.vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
-    geo2.numVertices = shape2[0].length;
-    geo2.texture = gl.createTexture();
-    image2 = document.getElementById("wallTexture");
-    configureTexture(geo2.texture, image2);
-    geo2.texCoordBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, geo2.texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape2[1]), gl.STATIC_DRAW);
-    geo2.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
-    geo2.textureMagFilter = gl.LINEAR;
-    
+    geo.numVertices = shape[0].length;
+    geo.texture = gl.createTexture();
+    image = document.getElementById("arenaTexture");
+    configureTexture(geo.texture, image);
+    geo.texCoordBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[1]), gl.STATIC_DRAW);
+    geo.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
+    geo.textureMagFilter = gl.LINEAR;
 }
 
 function configureTexture(texture, image)
