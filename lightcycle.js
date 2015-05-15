@@ -156,6 +156,7 @@ function initializeGeometry()
     geo.texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.texCoords), gl.STATIC_DRAW);
+    /*
     // Negate normals, because the arena walls face inwards
     for (var i = 0; i < shape.normals.length; i++) {
         shape.normals[i] = negate(shape.normals[i]);
@@ -167,6 +168,7 @@ function initializeGeometry()
     geo.diffuse = [0.3, 0.61, 0.35];
     geo.specular = [0.5, 0.5, 0.5];
     geo.shininess = 9.0;
+    */
 
     geo = geometry.ufo = {};
     shape = makeCube(1);
@@ -240,7 +242,6 @@ function render(time)
 
     // Other misc settings
     toggleAttrib("vPosition", true);
-    toggleAttrib("vNormal", true);
 
     // Draw game arena
     {
@@ -276,18 +277,27 @@ function render(time)
         model = mult(model, scale(world.arena[0], 1000, world.arena[1]));
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
-        // Switch normal buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
-        setAttrib("vNormal", 4);
+        if (geo.ambient) {
+            toggleAttrib("vNormal", true);
+            setUniform(gl.uniform1i, "useLighting", true);
 
-        // Setting reflection stuff
-        var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
-        var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
-        var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
-        setUniform(gl.uniform4fv, "ambient", flatten(ambient));
-        setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
-        setUniform(gl.uniform4fv, "specular", flatten(specular));
-        setUniform(gl.uniform1f, "shininess", geo.shininess);
+            // Switch normal buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+            setAttrib("vNormal", 4);
+
+            // Setting reflection stuff
+            var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
+            var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
+            var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
+            setUniform(gl.uniform4fv, "ambient", flatten(ambient));
+            setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
+            setUniform(gl.uniform4fv, "specular", flatten(specular));
+            setUniform(gl.uniform1f, "shininess", geo.shininess);
+        }
+        else {
+            toggleAttrib("vNormal", false);
+            setUniform(gl.uniform1i, "useLighting", false);
+        }
 
         gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
     }
@@ -327,18 +337,27 @@ function render(time)
             setUniform(gl.uniform1i, "useTexture", false);
         }
 
-        // Switch normal buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
-        setAttrib("vNormal", 4);
+        if (geo.ambient) {
+            toggleAttrib("vNormal", true);
+            setUniform(gl.uniform1i, "useLighting", true);
 
-        // Setting reflection stuff
-        var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
-        var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
-        var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
-        setUniform(gl.uniform4fv, "ambient", flatten(ambient));
-        setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
-        setUniform(gl.uniform4fv, "specular", flatten(specular));
-        setUniform(gl.uniform1f, "shininess", geo.shininess);
+            // Switch normal buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+            setAttrib("vNormal", 4);
+
+            // Setting reflection stuff
+            var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
+            var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
+            var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
+            setUniform(gl.uniform4fv, "ambient", flatten(ambient));
+            setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
+            setUniform(gl.uniform4fv, "specular", flatten(specular));
+            setUniform(gl.uniform1f, "shininess", geo.shininess);
+        }
+        else {
+            toggleAttrib("vNormal", false);
+            setUniform(gl.uniform1i, "useLighting", false);
+        }
 
         gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
     }
