@@ -45,12 +45,15 @@ function angleDiff(a, b)
 // Returns an object with attributes:
 //   - vertices: vertex coordinates
 //   - texCoords: texture coordinates
+//   - normals: normal vectors for each vertex
 function makeCube(zoom)
 {
     if (typeof(zoom) == 'undefined')
         zoom = 1;
 
-    var vertices = [], texCoords = [];
+    var r = {"vertices": [],
+             "texCoords": [],
+             "normals": []};
 
     var texCorners = [
         vec2(0, 0),
@@ -69,11 +72,13 @@ function makeCube(zoom)
         vec4(1, 0, 0)
     ];
     function quad(a, b, c, d) {
-        vIdx = [a, b, c, c, d, a];
-        tIdx = [1, 0, 3, 3, 2, 1];
+        var vIdx = [a, b, c, c, d, a];
+        var tIdx = [1, 0, 3, 3, 2, 1];
+        var n = normal(corners[vIdx[0]], corners[vIdx[1]], corners[vIdx[2]]);
         for (var i = 0; i < vIdx.length; i++) {
-            vertices.push(corners[vIdx[i]]);
-            texCoords.push(texCorners[tIdx[i]]);
+            r.vertices.push(corners[vIdx[i]]);
+            r.texCoords.push(texCorners[tIdx[i]]);
+            r.normals.push(vec4(n));
         }
     }
 
@@ -84,6 +89,13 @@ function makeCube(zoom)
     quad(5, 1, 2, 6);
     quad(0, 4, 7, 3);
 
-    return {"vertices": vertices,
-            "texCoords": texCoords};
+    return r;
+}
+
+// Computes the normal of a triangle primitive
+function normal(a, b, c)
+{
+    var v = subtract(b, a);
+    var u = subtract(c, a);
+    return normalize(cross(v, u));
 }
