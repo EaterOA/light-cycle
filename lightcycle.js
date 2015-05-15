@@ -28,6 +28,7 @@ window.onload = function init()
     gl.enable(gl.DEPTH_TEST);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
+    // Adjust framebuffer and viewport size for CSS
     var displayHeight = canvas.clientHeight;
     var displayWidth = canvas.clientWidth;
     if (displayHeight != canvas.height)
@@ -35,7 +36,7 @@ window.onload = function init()
     if (displayWidth != canvas.width)
         canvas.width = displayWidth;
     gl.viewport(0, 0, canvas.width, canvas.height);
-
+    aspect = canvas.width / canvas.height;
 
     // Compile shaders
     program = initShaders(gl, "vertex-shader", "fragment-shader");
@@ -44,11 +45,10 @@ window.onload = function init()
     // Create game world / logic controller
     world = new World();
 
-    //
+    // Create the geometry used in World objects
     initializeGeometry();
 
     // Other set up
-    aspect = canvas.width / canvas.height;
     addEventListener("keydown", handleKey);
     setUniform(gl.uniform1i, "texture", 0);
     
@@ -129,14 +129,14 @@ function initializeGeometry()
     shape = makeCube(100);
     geo.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
-    geo.numVertices = shape[0].length;
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.vertices), gl.STATIC_DRAW);
+    geo.numVertices = shape.vertices.length;
     geo.texture = gl.createTexture();
     image = document.getElementById("arenaTexture");
     configureTexture(geo.texture, image);
     geo.texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[1]), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.texCoords), gl.STATIC_DRAW);
     geo.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
     geo.textureMagFilter = gl.LINEAR;
 
@@ -144,9 +144,8 @@ function initializeGeometry()
     shape = makeCube(1);
     geo.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape[0]), gl.STATIC_DRAW);
-    geo.numVertices = shape[0].length;
-    geo.center = [0.5, 0.5, 0.5];
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.vertices), gl.STATIC_DRAW);
+    geo.numVertices = shape.vertices.length;
 }
 
 function configureTexture(texture, image)
@@ -160,47 +159,6 @@ function configureTexture(texture, image)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 }
 
-function makeCube(zoom)
-{
-    var vertices = [], texCoords = [];
-
-    // Texture coordinates are vec2 + a homogeneous coordinate, so they can be
-    // transformed as well
-    var texCorners = [
-        vec2(0, 0),
-        vec2(0, zoom),
-        vec2(zoom, zoom),
-        vec2(zoom, 0)
-    ];
-    var corners = [
-        vec4(0, 0, 1),
-        vec4(0, 1, 1),
-        vec4(1, 1, 1),
-        vec4(1, 0, 1),
-        vec4(0, 0, 0),
-        vec4(0, 1, 0),
-        vec4(1, 1, 0),
-        vec4(1, 0, 0)
-    ];
-    function quad(a, b, c, d) {
-        vIdx = [a, b, c, c, d, a];
-        tIdx = [1, 0, 3, 3, 2, 1];
-        for (var i = 0; i < vIdx.length; i++) {
-            vertices.push(corners[vIdx[i]]);
-            texCoords.push(texCorners[tIdx[i]]);
-        }
-    }
-
-    quad(1, 0, 3, 2);
-    quad(4, 0, 1, 5);
-    quad(6, 2, 3, 7);
-    quad(4, 5, 6, 7);
-    quad(5, 1, 2, 6);
-    quad(0, 4, 7, 3);
-
-    return [vertices, texCoords];
-}
-
 function render(time)
 {
     // Update game state
@@ -212,32 +170,22 @@ function render(time)
     // Adjust camera to player position and direction
     if (world.player) {
         var p = world.player;
-        var geo = geometry[p.type];
 
         // Adjust direction
         var nextAngle = 270 - ufoDir * 90;
-        var angleDiff = Math.abs(nextAngle - cameraY);
-        if (angleDiff > 180)
-            angleDiff = 360 - angleDiff;
-        var rotateSpd = angleDiff * 8 + 10;
+        var diff = angleDiff(cameraY, nextAngle);
+        var rotateSpd = diff * 8 + (diff >= 0 ? 10 : -10);
         var rotateAmt = rotateSpd * world.elapsed;
-        if (angleDiff < rotateAmt)
+        if (Math.abs(diff) < Math.abs(rotateAmt))
             cameraY = nextAngle;
-        else {
-            if (nextAngle == 0 && cameraY < 180 ||
-                    nextAngle == 90 && cameraY < 270 && cameraY >= 90 ||
-                    nextAngle == 180 && cameraY >= 180 ||
-                    nextAngle == 270 && (cameraY >= 270 || cameraY < 90))
-                rotateAmt = -rotateAmt;
+        else
             cameraY += rotateAmt;
-        }
-        cameraY %= 360;
-        if (cameraY < 0) cameraY += 360;
+        cameraY = normalizeAngle(cameraY);
 
         // Adjust position
         cameraPosition = p.position.slice();
         for (var i = 0; i < p.size.length; i++)
-            cameraPosition[i] += geo.center[i] * p.size[i];
+            cameraPosition[i] += p.size[i] / 2;
         var offset = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 5, 17));
         cameraPosition = add(cameraPosition, offset.slice(0,3));
     }
@@ -251,7 +199,7 @@ function render(time)
 
     // Adjust projection
     var fovy = Math.atan(Math.tan(radians(cameraFov / 2)) / aspect);
-    fovy = fovy * 180 / Math.PI * 2;
+    fovy = degrees(fovy) * 2;
     projection = perspective(fovy, aspect, 1, 5000);
     setUniform(gl.uniformMatrix4fv, "vProjection", flatten(projection));
 
@@ -307,10 +255,7 @@ function render(time)
         // Set model transform
         var model = mat4();
         model = mult(model, translate(obj.position));
-        var scaleMatrix = mat4();
-        for (var ii = 0; ii < 3; ii++)
-            scaleMatrix[ii][ii] = obj.size[ii];
-        model = mult(model, scaleMatrix);
+        model = mult(model, scale(obj.size));
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
         if (geo.texture) {
@@ -385,19 +330,6 @@ function handleKey(e)
     else if (e.keyCode == 80) { // p
         console.log(cameraPosition);
     }
-}
-
-// applies mat to vec
-function transform(mat, vec)
-{
-    var res = [];
-    for (var i = 0; i < mat.length; i++) {
-        var sum = 0.0;
-        for (var j = 0; j < vec.length; j++)
-            sum += mat[i][j] * vec[j];
-        res.push(sum);
-    }
-    return res;
 }
 
 function setUniform(setterFn, key, value)
