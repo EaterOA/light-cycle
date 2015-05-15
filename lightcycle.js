@@ -12,8 +12,6 @@ var cameraY = 0;
 var cameraFov = 50;
 var arenaDimX = 1000;
 var arenaDimZ = 1000;
-var ufoDir = 0;
-var ufoSpd = 100.0;
 
 window.onload = function init()
 {
@@ -67,9 +65,23 @@ var World = function()
     ufotable.type = "ufo";
     ufotable.position = [0.0, 0.0, 5.0];
     ufotable.size = [1.0, 1.0, 1.0];
+    ufotable.dir = 0;
+    ufotable.spd = 100.0;
     this.objects.push(ufotable);
 
     this.player = ufotable;
+    addEventListener("keydown", this.playerControls.bind(this));
+}
+
+World.prototype.playerControls = function(e)
+{
+    var p = this.player;
+    if (e.keyCode == 74) { // j
+        p.dir = (p.dir + 3) % 4;
+    }
+    else if (e.keyCode == 75) { // k
+        p.dir = (p.dir + 1) % 4;
+    }
 }
 
 World.prototype.update = function(time)
@@ -80,27 +92,27 @@ World.prototype.update = function(time)
 
     for (var i = 0; i < this.objects.length; i++) {
         var obj = this.objects[i];
-        if (obj.type == "ufo")
+        if (obj.spd)
         {
-            if (ufoDir == 0)
+            if (obj.dir == 0)
             {
-                obj.position[0] += this.elapsed * ufoSpd;
+                obj.position[0] += this.elapsed * obj.spd;
                 if (obj.position[0] > arenaDimX - obj.size[0])
                 {
                     obj.position[0] = arenaDimX - obj.size[0];
                 }
             }
-            else if (ufoDir == 1)
+            else if (obj.dir == 1)
             {
-                obj.position[2] += this.elapsed * ufoSpd;
+                obj.position[2] += this.elapsed * obj.spd;
                 if (obj.position[2] > arenaDimZ - obj.size[2])
                 {
                     obj.position[2] = arenaDimZ - obj.size[2];
                 }
             }
-            else if (ufoDir == 2)
+            else if (obj.dir == 2)
             {
-                obj.position[0] -= this.elapsed * ufoSpd;
+                obj.position[0] -= this.elapsed * obj.spd;
                 if (obj.position[0] < 0.0)
                 {
                     obj.position[0] = 0;
@@ -108,7 +120,7 @@ World.prototype.update = function(time)
             }
             else
             {
-                obj.position[2] -= this.elapsed * ufoSpd;
+                obj.position[2] -= this.elapsed * obj.spd;
                 if (obj.position[2] < 0.0)
                 {
                     obj.position[2] = 0;
@@ -172,7 +184,7 @@ function render(time)
         var p = world.player;
 
         // Adjust direction
-        var nextAngle = 270 - ufoDir * 90;
+        var nextAngle = 270 - p.dir * 90;
         var diff = angleDiff(cameraY, nextAngle);
         var rotateSpd = diff * 8 + (diff >= 0 ? 10 : -10);
         var rotateAmt = rotateSpd * world.elapsed;
@@ -320,12 +332,6 @@ function handleKey(e)
     }
     else if (e.keyCode == 88) { // x
         cameraX += -1;
-    }
-    else if (e.keyCode == 74) { // j
-        ufoDir = (ufoDir + 3) % 4;
-    }
-    else if (e.keyCode == 75) { // k
-        ufoDir = (ufoDir + 1) % 4;
     }
     else if (e.keyCode == 80) { // p
         console.log(cameraPosition);
