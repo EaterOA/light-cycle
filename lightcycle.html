@@ -5,18 +5,32 @@
 
 <script id="vertex-shader" type="x-shader/x-vertex">
 attribute vec4 vPosition;
+attribute vec4 vNormal;
 attribute vec2 vTexCoord;
 
 uniform mat4 vModel;
 uniform mat4 vView;
 uniform mat4 vProjection;
 uniform bool useTexture;
+uniform vec4 lightPosition;
 
 varying vec2 fTexCoord;
+varying vec3 N, V, L, H;
 
 void main()
 {
     gl_Position = vProjection * vView * vModel * vPosition;
+
+    // Convert base coordinates into world space
+    vec3 worldPosition = (vView * vModel * vPosition).xyz;
+    vec3 worldLightPosition = (vView * lightPosition).xyz;
+    vec3 worldNormal = mat3(vView * vModel) * vNormal.xyz;
+
+    // Compute lighting vectors in reflection model
+    N = normalize(worldNormal);
+    L = normalize(worldLightPosition - worldPosition);
+    V = -normalize(worldPosition);
+    H = normalize(L + V);
 
     if (useTexture)
         fTexCoord = vTexCoord;
@@ -27,16 +41,28 @@ void main()
 precision mediump float;
 
 varying vec2 fTexCoord;
+varying vec3 N, V, L, H;
 
 uniform sampler2D texture;
 uniform bool useTexture;
+uniform vec4 ambient, diffuse, specular;
+uniform float shininess;
 
 void main()
 {
-    if (useTexture)
-        gl_FragColor = texture2D(texture, fTexCoord);
-    else
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    float Kd = max(dot(L, N), 0.0);
+    float Ks = pow(max(dot(N, H), 0.0), shininess);
+    if (dot(L, N) < 0.0)
+        Ks = 0.0;
+    vec4 color = ambient + Kd*diffuse + Ks*specular;
+
+    if (useTexture) {
+        gl_FragColor = color * texture2D(texture, fTexCoord);
+    }
+    else {
+        gl_FragColor = color;
+    }
+    gl_FragColor.a = 1.0;
 }
 </script>
 

@@ -49,6 +49,7 @@ window.onload = function init()
     // Other set up
     addEventListener("keydown", handleKey);
     setUniform(gl.uniform1i, "texture", 0);
+    setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(geometry.light.position)));
     
     // First frame
     requestAnimFrame(render);
@@ -137,6 +138,12 @@ function initializeGeometry()
 
     geometry = {};
 
+    geo = geometry.light = {};
+    geo.ambient = [0.2, 0.2, 0.2];
+    geo.diffuse = [0.8, 1.0, 0.9];
+    geo.specular = [0.8, 1.0, 0.9];
+    geo.position = [500, 500, 500];
+
     geo = geometry.arena = {};
     shape = makeCube(100);
     geo.vertexBuffer = gl.createBuffer();
@@ -149,15 +156,31 @@ function initializeGeometry()
     geo.texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.texCoords), gl.STATIC_DRAW);
-    geo.textureMinFilter = gl.LINEAR_MIPMAP_LINEAR;
-    geo.textureMagFilter = gl.LINEAR;
+    // Negate normals, because the arena walls face inwards
+    for (var i = 0; i < shape.normals.length; i++) {
+        shape.normals[i] = negate(shape.normals[i]);
+    }
+    geo.normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.normals), gl.STATIC_DRAW);
+    geo.ambient = [0.8, 0.8, 0.8];
+    geo.diffuse = [0.3, 0.61, 0.35];
+    geo.specular = [0.5, 0.5, 0.5];
+    geo.shininess = 9.0;
 
     geo = geometry.ufo = {};
     shape = makeCube(1);
     geo.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.vertices), gl.STATIC_DRAW);
+    geo.normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.normals), gl.STATIC_DRAW);
     geo.numVertices = shape.vertices.length;
+    geo.ambient = [0.7, 0.5, 0.8];
+    geo.diffuse = [0.2, 0.31, 0.35];
+    geo.specular = [0.5, 0.5, 0.5];
+    geo.shininess = 4.0;
 }
 
 function configureTexture(texture, image)
@@ -217,6 +240,7 @@ function render(time)
 
     // Other misc settings
     toggleAttrib("vPosition", true);
+    toggleAttrib("vNormal", true);
 
     // Draw game arena
     {
@@ -251,6 +275,19 @@ function render(time)
         model = mat4();
         model = mult(model, scale(world.arena[0], 1000, world.arena[1]));
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
+
+        // Switch normal buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+        setAttrib("vNormal", 4);
+
+        // Setting reflection stuff
+        var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
+        var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
+        var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
+        setUniform(gl.uniform4fv, "ambient", flatten(ambient));
+        setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
+        setUniform(gl.uniform4fv, "specular", flatten(specular));
+        setUniform(gl.uniform1f, "shininess", geo.shininess);
 
         gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
     }
@@ -289,6 +326,19 @@ function render(time)
             toggleAttrib("vTexCoord", false);
             setUniform(gl.uniform1i, "useTexture", false);
         }
+
+        // Switch normal buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+        setAttrib("vNormal", 4);
+
+        // Setting reflection stuff
+        var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
+        var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
+        var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
+        setUniform(gl.uniform4fv, "ambient", flatten(ambient));
+        setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
+        setUniform(gl.uniform4fv, "specular", flatten(specular));
+        setUniform(gl.uniform1f, "shininess", geo.shininess);
 
         gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
     }
