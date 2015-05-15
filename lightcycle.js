@@ -59,12 +59,13 @@ window.onload = function init()
 var World = function()
 {
     this.currentTime = 0;
+    this.elapsed = 0;
     this.arena = [arenaDimX, arenaDimZ];
     this.objects = [];
 
     var ufotable = {};
     ufotable.type = "ufo";
-    ufotable.position = [0.0, 4.0, 5.0];
+    ufotable.position = [0.0, 0.0, 5.0];
     ufotable.size = [1.0, 1.0, 1.0];
     this.objects.push(ufotable);
 
@@ -74,7 +75,7 @@ var World = function()
 World.prototype.update = function(time)
 {
     time /= 1000.0;
-    var elapsed = time - this.currentTime;
+    this.elapsed = time - this.currentTime;
     this.currentTime = time;
 
     for (var i = 0; i < this.objects.length; i++) {
@@ -83,37 +84,33 @@ World.prototype.update = function(time)
         {
             if (ufoDir == 0)
             {
-                obj.position[0] += elapsed * ufoSpd;
+                obj.position[0] += this.elapsed * ufoSpd;
                 if (obj.position[0] > arenaDimX - obj.size[0])
                 {
-                    console.log("Collision");
                     obj.position[0] = arenaDimX - obj.size[0];
                 }
             }
             else if (ufoDir == 1)
             {
-                obj.position[2] += elapsed * ufoSpd;
+                obj.position[2] += this.elapsed * ufoSpd;
                 if (obj.position[2] > arenaDimZ - obj.size[2])
                 {
-                    console.log("Collision");
                     obj.position[2] = arenaDimZ - obj.size[2];
                 }
             }
             else if (ufoDir == 2)
             {
-                obj.position[0] -= elapsed * ufoSpd;
+                obj.position[0] -= this.elapsed * ufoSpd;
                 if (obj.position[0] < 0.0)
                 {
-                    console.log("Collision");
                     obj.position[0] = 0;
                 }
             }
             else
             {
-                obj.position[2] -= elapsed * ufoSpd;
+                obj.position[2] -= this.elapsed * ufoSpd;
                 if (obj.position[2] < 0.0)
                 {
-                    console.log("Collision");
                     obj.position[2] = 0;
                 }
             }
@@ -215,13 +212,34 @@ function render(time)
     // Adjust camera to player position and direction
     if (world.player) {
         var p = world.player;
-        cameraPosition = p.position.slice();
         var geo = geometry[p.type];
+
+        // Adjust direction
+        var nextAngle = 270 - ufoDir * 90;
+        var angleDiff = Math.abs(nextAngle - cameraY);
+        if (angleDiff > 180)
+            angleDiff = 360 - angleDiff;
+        var rotateSpd = angleDiff * 8 + 10;
+        var rotateAmt = rotateSpd * world.elapsed;
+        if (angleDiff < rotateAmt)
+            cameraY = nextAngle;
+        else {
+            if (nextAngle == 0 && cameraY < 180 ||
+                    nextAngle == 90 && cameraY < 270 && cameraY >= 90 ||
+                    nextAngle == 180 && cameraY >= 180 ||
+                    nextAngle == 270 && (cameraY >= 270 || cameraY < 90))
+                rotateAmt = -rotateAmt;
+            cameraY += rotateAmt;
+        }
+        cameraY %= 360;
+        if (cameraY < 0) cameraY += 360;
+
+        // Adjust position
+        cameraPosition = p.position.slice();
         for (var i = 0; i < p.size.length; i++)
             cameraPosition[i] += geo.center[i] * p.size[i];
-        cameraY = 270 - ufoDir*90;
-        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 5, 17));
-        cameraPosition = add(cameraPosition, dir.slice(0,3));
+        var offset = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 5, 17));
+        cameraPosition = add(cameraPosition, offset.slice(0,3));
     }
 
     // Adjust view
