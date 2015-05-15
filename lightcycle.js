@@ -212,7 +212,7 @@ function render(time)
     // Clear screen
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Adjust camera view to player
+    // Adjust camera to player position and direction
     if (world.player) {
         var p = world.player;
         cameraPosition = p.position.slice();
@@ -220,22 +220,16 @@ function render(time)
         for (var i = 0; i < p.size.length; i++)
             cameraPosition[i] += geo.center[i] * p.size[i];
         cameraY = 270 - ufoDir*90;
+        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 5, 17));
+        cameraPosition = add(cameraPosition, dir.slice(0,3));
+    }
 
-        var view = mat4();
-        view = mult(view, translate(negate([0, 2.5, 17])));
-        view = mult(view, rotate(-cameraX, [1, 0, 0]));
-        view = mult(view, rotate(-cameraY, [0, 1, 0]));
-        view = mult(view, translate(negate(cameraPosition)));
-        setUniform(gl.uniformMatrix4fv, "vView", flatten(view));
-    }
-    // Free camera
-    else {
-        var view = mat4();
-        view = mult(view, rotate(-cameraX, [1, 0, 0]));
-        view = mult(view, rotate(-cameraY, [0, 1, 0]));
-        view = mult(view, translate(negate(cameraPosition)));
-        setUniform(gl.uniformMatrix4fv, "vView", flatten(view));
-    }
+    // Adjust view
+    var view = mat4();
+    view = mult(view, rotate(-cameraX, [1, 0, 0]));
+    view = mult(view, rotate(-cameraY, [0, 1, 0]));
+    view = mult(view, translate(negate(cameraPosition)));
+    setUniform(gl.uniformMatrix4fv, "vView", flatten(view));
 
     // Adjust projection
     var fovy = Math.atan(Math.tan(radians(cameraFov / 2)) / aspect);
