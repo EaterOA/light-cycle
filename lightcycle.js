@@ -7,7 +7,7 @@ var world;
 var geometry;
 var aspect = 1.0;
 var cameraPosition = [1, 10, 20];
-var cameraX = -12;
+var cameraX = -11;
 var cameraY = 0;
 var cameraFov = 50;
 var arenaDimX = 1000;
@@ -48,6 +48,7 @@ window.onload = function init()
 
     // Other set up
     addEventListener("keydown", handleKey);
+    toggleAttrib("vPosition", true);
     setUniform(gl.uniform1i, "texture", 0);
     setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(geometry.light.position)));
     
@@ -59,8 +60,13 @@ var World = function()
 {
     this.currentTime = 0;
     this.elapsed = 0;
-    this.arena = [arenaDimX, arenaDimZ];
     this.objects = [];
+
+    var arena = {};
+    arena.type = "arena";
+    arena.position = [0, 0, 0];
+    arena.size = [arenaDimX, 1000, arenaDimZ];
+    this.objects.push(arena);
 
     var ufotable = {};
     ufotable.type = "ufo";
@@ -223,7 +229,7 @@ function render(time)
         cameraPosition = p.position.slice();
         for (var i = 0; i < p.size.length; i++)
             cameraPosition[i] += p.size[i] / 2;
-        var offset = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 5, 17));
+        var offset = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 6, 17));
         cameraPosition = add(cameraPosition, offset.slice(0,3));
     }
 
@@ -240,68 +246,6 @@ function render(time)
     projection = perspective(fovy, aspect, 1, 5000);
     setUniform(gl.uniformMatrix4fv, "vProjection", flatten(projection));
 
-    // Other misc settings
-    toggleAttrib("vPosition", true);
-
-    // Draw game arena
-    {
-        var geo = geometry.arena;
-
-        // Switch vertex buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
-        setAttrib("vPosition", 4);
-
-        // Turn on textures
-        toggleAttrib("vTexCoord", true);
-        setUniform(gl.uniform1i, "useTexture", true);
-
-        // Switch texCoord buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
-        setAttrib("vTexCoord", 2);
-
-        // Configure texture settings
-        gl.bindTexture(gl.TEXTURE_2D, geo.texture);
-        var ext = (
-            gl.getExtension('EXT_texture_filter_anisotropic') ||
-            gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
-            gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
-        );
-        if (ext){
-            var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-            gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
-        }
-
-        // Set model transform
-        var model, scaleMatrix;
-        model = mat4();
-        model = mult(model, scale(world.arena[0], 1000, world.arena[1]));
-        setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
-
-        if (geo.ambient) {
-            toggleAttrib("vNormal", true);
-            setUniform(gl.uniform1i, "useLighting", true);
-
-            // Switch normal buffer
-            gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
-            setAttrib("vNormal", 4);
-
-            // Setting reflection stuff
-            var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
-            var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
-            var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
-            setUniform(gl.uniform4fv, "ambient", flatten(ambient));
-            setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
-            setUniform(gl.uniform4fv, "specular", flatten(specular));
-            setUniform(gl.uniform1f, "shininess", geo.shininess);
-        }
-        else {
-            toggleAttrib("vNormal", false);
-            setUniform(gl.uniform1i, "useLighting", false);
-        }
-
-        gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
-    }
-
     // Draw game objects
     for (var i = 0; i < world.objects.length; i++) {
         var obj = world.objects[i];
@@ -317,6 +261,7 @@ function render(time)
         model = mult(model, scale(obj.size));
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
+        // Configure texture, if defined
         if (geo.texture) {
             toggleAttrib("vTexCoord", true);
             setUniform(gl.uniform1i, "useTexture", true);
@@ -325,18 +270,24 @@ function render(time)
             gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
             setAttrib("vTexCoord", 2);
 
-            // Configure texture settings
+            // Configure texture filter
             gl.bindTexture(gl.TEXTURE_2D, geo.texture);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER,
-                geo.textureMinFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER,
-                geo.textureMagFilter);
+            var ext = (
+                gl.getExtension('EXT_texture_filter_anisotropic') ||
+                gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+                gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+            );
+            if (ext) {
+                var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+                gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
+            }
         }
         else {
             toggleAttrib("vTexCoord", false);
             setUniform(gl.uniform1i, "useTexture", false);
         }
 
+        // Configure lighting, if defined
         if (geo.ambient) {
             toggleAttrib("vNormal", true);
             setUniform(gl.uniform1i, "useLighting", true);
