@@ -40,13 +40,13 @@ function angleDiff(a, b)
     return diff + 360;
 }
 
-// Creates a cube geometry
+// Creates a quad geometry (two triangles)
 // The optional zoom parameter allows zooming of texture
 // Returns an object with attributes:
 //   - vertices: vertex coordinates
 //   - texCoords: texture coordinates
 //   - normals: normal vectors for each vertex
-function makeCube(zoom)
+function makeQuad(zoom)
 {
     if (typeof(zoom) == 'undefined')
         zoom = 1;
@@ -62,32 +62,53 @@ function makeCube(zoom)
         vec2(zoom, 0)
     ];
     var corners = [
-        vec4(0, 0, 1),
-        vec4(0, 1, 1),
-        vec4(1, 1, 1),
-        vec4(1, 0, 1),
         vec4(0, 0, 0),
-        vec4(0, 1, 0),
-        vec4(1, 1, 0),
-        vec4(1, 0, 0)
+        vec4(1, 0, 0),
+        vec4(1, 0, 1),
+        vec4(0, 0, 1),
     ];
-    function quad(a, b, c, d) {
-        var vIdx = [a, b, c, c, d, a];
-        var tIdx = [1, 0, 3, 3, 2, 1];
-        var n = normal(corners[vIdx[0]], corners[vIdx[1]], corners[vIdx[2]]);
-        for (var i = 0; i < vIdx.length; i++) {
-            r.vertices.push(corners[vIdx[i]]);
-            r.texCoords.push(texCorners[tIdx[i]]);
-            r.normals.push(vec4(n));
-        }
+    idx = [1, 0, 3, 3, 2, 1];
+    var n = normal(corners[idx[0]], corners[idx[1]], corners[idx[2]]);
+    for (var i = 0; i < idx.length; i++) {
+        r.vertices.push(corners[idx[i]]);
+        r.texCoords.push(texCorners[idx[i]]);
+        r.normals.push(vec4(n));
     }
 
-    quad(1, 0, 3, 2);
-    quad(4, 0, 1, 5);
-    quad(6, 2, 3, 7);
-    quad(4, 5, 6, 7);
-    quad(5, 1, 2, 6);
-    quad(0, 4, 7, 3);
+    return r;
+}
+
+// Creates a cube geometry (six quads)
+// The optional zoom parameter allows zooming of texture
+// Returns an object with attributes:
+//   - vertices: vertex coordinates
+//   - texCoords: texture coordinates
+//   - normals: normal vectors for each vertex
+function makeCube(zoom)
+{
+    if (typeof(zoom) == 'undefined')
+        zoom = 1;
+
+    var r = {"vertices": [],
+             "texCoords": [],
+             "normals": []};
+
+    var transforms = [
+        mult(translate(1, 0, 0), rotate(180, [0, 0, 1])),
+        rotate(-90, [1, 0, 0]),
+        mult(translate(0, 1, 1), rotate(90, [1, 0, 0])),
+        mult(translate(1, 1, 0), rotate(-90, [0, 0, 1])),
+        rotate(90, [0, 0, 1]),
+        translate(0, 1, 0),
+    ];
+    for (var i = 0; i < transforms.length; i++) {
+        var q = makeQuad(zoom);
+        q.vertices = transformVectors(transforms[i], q.vertices);
+        q.normals = transformVectors(transforms[i], q.normals);
+        for (var j = 0; j < q.vertices.length; j++) r.vertices.push(q.vertices[j]);
+        for (var j = 0; j < q.normals.length; j++) r.normals.push(q.normals[j]);
+        for (var j = 0; j < q.texCoords.length; j++) r.texCoords.push(q.texCoords[j]);
+    }
 
     return r;
 }
@@ -114,4 +135,13 @@ function angleBetweenY(v, u)
     var dotp = dot(v, u);
     var crossp = cross(v, u);
     return degrees(Math.atan2(crossp[1], dotp));
+}
+
+// Applies mat to all vertices in arr
+function transformVectors(mat, arr)
+{
+    res = []
+    for (var i = 0; i < arr.length; i++)
+        res.push(transform(mat, arr[i]))
+    return res;
 }
