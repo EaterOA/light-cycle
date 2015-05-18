@@ -52,16 +52,15 @@ function vec3()
 
 function vec4()
 {
-    var result = _argumentsToArray( arguments );
+    var v = arguments;
+    if (v.length == 1 && v[0] instanceof Array)
+        v = v[0];
+    var id = [0.0, 0.0, 0.0, 1.0];
 
-    switch ( result.length ) {
-    case 0: result.push( 0.0 );
-    case 1: result.push( 0.0 );
-    case 2: result.push( 0.0 );
-    case 3: result.push( 1.0 );
-    }
+    for (var i = 0; i < v.length; i++)
+        id[i] = v[i];
 
-    return result.splice( 0, 4 );
+    return id;
 }
 
 //----------------------------------------------------------------------------
@@ -129,7 +128,7 @@ function mat3()
 
 function mat4()
 {
-    var v = _argumentsToArray( arguments );
+    var v = arguments;
 
     var m = [];
     switch ( v.length ) {
@@ -145,10 +144,8 @@ function mat4()
         break;
 
     default:
-        m.push( vec4(v) );  v.splice( 0, 4 );
-        m.push( vec4(v) );  v.splice( 0, 4 );
-        m.push( vec4(v) );  v.splice( 0, 4 );
-        m.push( vec4(v) );
+        for (var i = 0; i < 4; i++)
+            m[i] = v[i];
         break;
     }
 
@@ -341,10 +338,6 @@ function translate( x, y, z )
 
 function rotate( angle, axis )
 {
-    if ( !Array.isArray(axis) ) {
-        axis = [ arguments[1], arguments[2], arguments[3] ];
-    }
-
     var v = normalize( axis );
 
     var x = v[0];
