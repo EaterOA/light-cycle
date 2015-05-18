@@ -69,9 +69,14 @@ function World()
     var ufotable = new Bike([0, 0, 0]);
     this.objects.push(ufotable);
 
+    var dullahan = new CpuBike([50, 0, 50]);
+    this.objects.push(dullahan);
+    
     this.arena = arena;
     this.player = ufotable;
+    //this.player = dullahan;
     addEventListener("keydown", this.player.controls.bind(this.player));
+
 }
 
 function Bike(pos)
@@ -103,6 +108,102 @@ Bike.prototype.update = function(world)
         this.position[0] = Math.max(this.position[0] - dist, 0);
     else if (this.dir == 3)
         this.position[2] = Math.max(this.position[2] - dist, 0);
+}
+
+CpuBike.prototype = new Bike();
+CpuBike.prototype.constructor = CpuBike;
+function CpuBike(pos)
+{
+    this.type = "bike";
+    this.position = pos;
+    this.spd = 100.0;
+    this.dir = 0;
+}
+
+CpuBike.prototype.update = function(world)
+{
+    var pika = 10;
+    var dist = world.elapsed * this.spd;
+    if (this.dir == 0)
+    {
+        var t = Math.min(this.position[0] + dist, world.arena.size[2] - pika);
+        if (t == world.arena.size[2] - pika)
+        {
+            var tt = Math.min(this.position[2] + dist, world.arena.size[0] - pika);
+            if (tt == world.arena.size[0] - pika)
+            {
+                this.position[2] = this.position[2] - dist;
+                this.dir = 3;
+            }
+            else
+            {
+                this.position[2] = tt;
+                this.dir = 1;
+            }
+        }
+        else
+            this.position[0] = t;
+    }        
+    else if (this.dir == 1)
+    {
+        var t = Math.min(this.position[2] + dist, world.arena.size[0] - pika);
+        if (t == world.arena.size[0] - pika)
+        {
+            var tt = Math.max(this.position[0] - dist, pika);
+            if (tt == pika)
+            {
+                this.position[0] = this.position[0] + dist;
+                this.dir = 0;
+            }
+            else
+            {
+                this.position[0] = tt;
+                this.dir = 2;
+            }
+        }
+        else
+            this.position[2] = t;
+    }
+    else if (this.dir == 2)
+    {
+        var t = Math.max(this.position[0] - dist, pika);
+        if (t == pika)
+        {
+            var tt = Math.max(this.position[2] - dist, pika);
+            if (tt == pika)
+            {
+                this.position[2] = this.position[2] + dist;
+                this.dir = 1;
+            }
+            else
+            {
+                this.position[2] = tt;
+                this.dir = 3;
+            }
+        }
+        else
+            this.position[0] = t;
+    }
+    else if (this.dir == 3)
+    {
+        var t = Math.max(this.position[2] - dist, pika);
+        if (t == pika)
+        {
+            var tt = Math.min(this.position[0] + dist, world.arena.size[2] - pika);
+            if (tt == world.arena.size[2] - pika)
+            {
+                this.position[0] = this.position[0] - dist;
+                this.dir = 2;
+            }
+            else
+            {
+                this.position[0] = tt;
+                this.dir = 0;
+            }
+        }
+        else
+            this.position[2] = t;
+    }
 }
 
 World.prototype.update = function(time)
@@ -324,7 +425,7 @@ function handleKey(e)
     else if (e.keyCode == 88) { // x
         cameraX += -1;
     }
-    else if (e.keyCode == 80) { // p
+    else if (e.keyCode == 80) { // p (for debug purposes)
         console.log(cameraPosition);
     }
 }
