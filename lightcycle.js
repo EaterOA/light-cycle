@@ -239,8 +239,8 @@ function initializeGeometry()
     geometry = {};
 
     geo = geometry.light = {};
-    geo.ambient = [0.2, 0.2, 0.2];
-    geo.diffuse = [0.8, 1.0, 0.9];
+    geo.ambient = [0.4, 0.8, 0.8];
+    geo.diffuse = [0.8, 0.9, 0.9];
     geo.specular = [0.8, 1.0, 0.9];
     geo.position = [500, 500, 500];
 
@@ -256,6 +256,12 @@ function initializeGeometry()
     geo.texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.texCoords), gl.STATIC_DRAW);
+    geo.generateModel = function(obj) {
+        var model = mat4();
+        model = mult(model, translate(obj.position));
+        model = mult(model, scale(obj.size));
+        return model;
+    }
 
     geo = geometry.bike = {};
     shape = makeCube();
@@ -270,6 +276,12 @@ function initializeGeometry()
     geo.diffuse = [0.2, 0.31, 0.35];
     geo.specular = [0.5, 0.5, 0.5];
     geo.shininess = 4.0;
+    geo.generateModel = function(obj) {
+        var model = mat4();
+        model = mult(model, translate(obj.position));
+        model = mult(model, translate([-0.5, 0, -0.5]));
+        return model;
+    }
 
     geo = geometry.wall = {};
     shape = makeCube();
@@ -283,7 +295,18 @@ function initializeGeometry()
     geo.ambient = [0.7, 0.8, 1.0];
     geo.diffuse = [0.7, 0.51, 0.95];
     geo.specular = [0.3, 0.1, 0.8];
-    geo.shininess = 4.0;
+    geo.shininess = 3.0;
+    geo.generateModel = function(obj) {
+        var model = mat4();
+        var v = subtract(obj.end, obj.start);
+        var size = [0.2, 3, length(v)];
+        var angle = angleBetweenY([0, 0, 1], v);
+        model = mult(model, translate(obj.start));
+        model = mult(model, rotate(angle, [0, 1, 0]));
+        model = mult(model, translate(-size[0], 0, 0));
+        model = mult(model, scale(size));
+        return model;
+    }
 }
 
 function configureTexture(texture, image)
@@ -349,24 +372,7 @@ function render(time)
         setAttrib("vPosition", 4);
 
         // Set model transform (depends heavily on object type)
-        var model = mat4();
-        if (obj.type == "bike") {
-            model = mult(model, translate(obj.position));
-            model = mult(model, translate([-0.5, 0, -0.5]));
-        }
-        else if (obj.type == "arena") {
-            model = mult(model, translate(obj.position));
-            model = mult(model, scale(obj.size));
-        }
-        else if (obj.type == "wall") {
-            var v = subtract(obj.end, obj.start);
-            var size = [0.2, 5, length(v)];
-            var angle = angleBetweenY([0, 0, 1], v);
-            model = mult(model, translate(obj.start));
-            model = mult(model, rotate(angle, [0, 1, 0]));
-            model = mult(model, translate(-size[0], 0, 0));
-            model = mult(model, scale(size));
-        }
+        var model = geo.generateModel(obj);
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
         // Configure texture, if defined
