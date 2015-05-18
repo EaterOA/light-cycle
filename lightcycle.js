@@ -72,8 +72,8 @@ function World()
     var dullahan = new CpuBike([50, 0, 50]);
     this.objects.push(dullahan);
     
-    var kyoani = new Wall([10, 0, 100], [400, 0, 100]);
-    this.objects.push(kyoani);
+    //var kyoani = new Wall([10, 0, 100], [400, 0, 100]);
+    //this.objects.push(kyoani);
 
     this.arena = arena;
     this.player = ufotable;
@@ -86,6 +86,7 @@ function Bike(pos)
 {
     this.type = "bike";
     this.position = pos;
+    this.startWall = [0, 0, 0]; //temp
     this.spd = 100.0;
     this.dir = 0;
 }
@@ -94,14 +95,17 @@ Bike.prototype.controls = function(e)
 {
     if (e.keyCode == 74) { // j
         this.dir = (this.dir + 3) % 4;
+        this.pushWall();
     }
     else if (e.keyCode == 75) { // k
         this.dir = (this.dir + 1) % 4;
+        this.pushWall();
     }
 }
 
 Bike.prototype.update = function(world)
 {
+
     var dist = world.elapsed * this.spd;
     if (this.dir == 0)
         this.position[0] = Math.min(this.position[0] + dist, world.arena.size[2]);
@@ -111,6 +115,21 @@ Bike.prototype.update = function(world)
         this.position[0] = Math.max(this.position[0] - dist, 0);
     else if (this.dir == 3)
         this.position[2] = Math.max(this.position[2] - dist, 0);
+    
+    this.drawWall();
+}
+
+Bike.prototype.drawWall = function()
+{
+    var kyoani = new Wall(this.startWall, this.position);
+    world.objects[3] = kyoani; //temp index
+}
+
+Bike.prototype.pushWall = function()
+{
+    var maki = new Wall(this.startWall, this.position.slice());
+    world.objects.push(maki);
+    this.startWall = this.position.slice();        
 }
 
 CpuBike.prototype = new Bike();
@@ -119,9 +138,24 @@ function CpuBike(pos)
 {
     this.type = "bike";
     this.position = pos;
+    this.startWall = [50, 0, 50]; //temp
     this.spd = 100.0;
     this.dir = 0;
 }
+
+CpuBike.prototype.drawWall = function()
+{
+    var kyoani = new Wall(this.startWall, this.position);
+    world.objects[4] = kyoani;  //temp index
+}
+
+CpuBike.prototype.pushWall = function()
+{
+    var maki = new Wall(this.startWall, this.position.slice());
+    world.objects.push(maki);
+    this.startWall = this.position.slice();        
+}
+
 
 CpuBike.prototype.update = function(world)
 {
@@ -132,7 +166,8 @@ CpuBike.prototype.update = function(world)
         var t = Math.min(this.position[0] + dist, world.arena.size[2] - pika);
         if (t == world.arena.size[2] - pika)
         {
-            var tt = Math.min(this.position[2] + dist, world.arena.size[0] - pika);
+            var tt = Math.min(this.position[2] + dist, world.arena.size[0] - pika);            
+            this.pushWall();
             if (tt == world.arena.size[0] - pika)
             {
                 this.position[2] = this.position[2] - dist;
@@ -153,6 +188,7 @@ CpuBike.prototype.update = function(world)
         if (t == world.arena.size[0] - pika)
         {
             var tt = Math.max(this.position[0] - dist, pika);
+            this.pushWall();
             if (tt == pika)
             {
                 this.position[0] = this.position[0] + dist;
@@ -173,6 +209,7 @@ CpuBike.prototype.update = function(world)
         if (t == pika)
         {
             var tt = Math.max(this.position[2] - dist, pika);
+            this.pushWall();
             if (tt == pika)
             {
                 this.position[2] = this.position[2] + dist;
@@ -193,6 +230,7 @@ CpuBike.prototype.update = function(world)
         if (t == pika)
         {
             var tt = Math.min(this.position[0] + dist, world.arena.size[2] - pika);
+            this.pushWall();
             if (tt == world.arena.size[2] - pika)
             {
                 this.position[0] = this.position[0] - dist;
@@ -207,6 +245,8 @@ CpuBike.prototype.update = function(world)
         else
             this.position[2] = t;
     }
+    
+    this.drawWall();
 }
 
 function Wall(start, end)
@@ -218,6 +258,7 @@ function Wall(start, end)
     this.start = start;
     this.end = end;
 }
+
 
 World.prototype.update = function(time)
 {
