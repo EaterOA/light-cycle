@@ -99,3 +99,9 @@ function normal(a, b, c)
     var u = subtract(c, a);
     return normalize(cross(v, u));
 }
+
+function stretch(s, v)
+{
+    for (var i = 0; i < v.length; i++)
+        v[i] = s * v[i];
+}

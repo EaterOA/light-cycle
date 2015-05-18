@@ -10,8 +10,6 @@ var cameraPosition = [1, 10, 20];
 var cameraX = -11;
 var cameraY = 0;
 var cameraFov = 50;
-var arenaDimX = 1000;
-var arenaDimZ = 1000;
 
 window.onload = function init()
 {
@@ -56,85 +54,67 @@ window.onload = function init()
     requestAnimFrame(render);
 }
 
-var World = function()
+function World()
 {
-    this.currentTime = 0;
+    this.time = 0;
     this.elapsed = 0;
     this.objects = [];
 
     var arena = {};
     arena.type = "arena";
     arena.position = [0, 0, 0];
-    arena.size = [arenaDimX, 1000, arenaDimZ];
+    arena.size = [1000, 1000, 1000];
     this.objects.push(arena);
 
-    var ufotable = {};
-    ufotable.type = "ufo";
-    ufotable.position = [0.0, 0.0, 5.0];
-    ufotable.size = [1.0, 1.0, 1.0];
-    ufotable.dir = 0;
-    ufotable.spd = 100.0;
+    var ufotable = new Bike([0, 0, 0]);
     this.objects.push(ufotable);
 
+    this.arena = arena;
     this.player = ufotable;
-    addEventListener("keydown", this.playerControls.bind(this));
+    addEventListener("keydown", this.player.controls.bind(this.player));
 }
 
-World.prototype.playerControls = function(e)
+function Bike(pos)
 {
-    var p = this.player;
+    this.type = "bike";
+    this.position = pos;
+    this.spd = 100.0;
+    this.dir = 0;
+}
+
+Bike.prototype.controls = function(e)
+{
     if (e.keyCode == 74) { // j
-        p.dir = (p.dir + 3) % 4;
+        this.dir = (this.dir + 3) % 4;
     }
     else if (e.keyCode == 75) { // k
-        p.dir = (p.dir + 1) % 4;
+        this.dir = (this.dir + 1) % 4;
     }
+}
+
+Bike.prototype.update = function(world)
+{
+    var dist = world.elapsed * this.spd;
+    if (this.dir == 0)
+        this.position[0] = Math.min(this.position[0] + dist, world.arena.size[2]);
+    else if (this.dir == 1)
+        this.position[2] = Math.min(this.position[2] + dist, world.arena.size[0]);
+    else if (this.dir == 2)
+        this.position[0] = Math.max(this.position[0] - dist, 0);
+    else if (this.dir == 3)
+        this.position[2] = Math.max(this.position[2] - dist, 0);
 }
 
 World.prototype.update = function(time)
 {
     time /= 1000.0;
-    this.elapsed = time - this.currentTime;
-    this.currentTime = time;
+    this.elapsed = time - this.time;
+    this.time = time;
 
     for (var i = 0; i < this.objects.length; i++) {
         var obj = this.objects[i];
-        if (obj.spd)
-        {
-            if (obj.dir == 0)
-            {
-                obj.position[0] += this.elapsed * obj.spd;
-                if (obj.position[0] > arenaDimX - obj.size[0])
-                {
-                    obj.position[0] = arenaDimX - obj.size[0];
-                }
-            }
-            else if (obj.dir == 1)
-            {
-                obj.position[2] += this.elapsed * obj.spd;
-                if (obj.position[2] > arenaDimZ - obj.size[2])
-                {
-                    obj.position[2] = arenaDimZ - obj.size[2];
-                }
-            }
-            else if (obj.dir == 2)
-            {
-                obj.position[0] -= this.elapsed * obj.spd;
-                if (obj.position[0] < 0.0)
-                {
-                    obj.position[0] = 0;
-                }
-            }
-            else
-            {
-                obj.position[2] -= this.elapsed * obj.spd;
-                if (obj.position[2] < 0.0)
-                {
-                    obj.position[2] = 0;
-                }
-            }
-            
-        }
+        if (obj.update)
+            obj.update(this);
     }
 }
 
@@ -162,22 +142,9 @@ function initializeGeometry()
     geo.texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.texCoords), gl.STATIC_DRAW);
-    /*
-    // Negate normals, because the arena walls face inwards
-    for (var i = 0; i < shape.normals.length; i++) {
-        shape.normals[i] = negate(shape.normals[i]);
-    }
-    geo.normalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.normals), gl.STATIC_DRAW);
-    geo.ambient = [0.8, 0.8, 0.8];
-    geo.diffuse = [0.3, 0.61, 0.35];
-    geo.specular = [0.5, 0.5, 0.5];
-    geo.shininess = 9.0;
-    */
 
-    geo = geometry.ufo = {};
-    shape = makeCube(1);
+    geo = geometry.bike = {};
+    shape = makeCube();
     geo.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.vertices), gl.STATIC_DRAW);
@@ -227,8 +194,6 @@ function render(time)
 
         // Adjust position
         cameraPosition = p.position.slice();
-        for (var i = 0; i < p.size.length; i++)
-            cameraPosition[i] += p.size[i] / 2;
         var offset = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 6, 17));
         cameraPosition = add(cameraPosition, offset.slice(0,3));
     }
@@ -255,10 +220,16 @@ function render(time)
         gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
         setAttrib("vPosition", 4);
 
-        // Set model transform
+        // Set model transform (depends heavily on object type)
         var model = mat4();
-        model = mult(model, translate(obj.position));
-        model = mult(model, scale(obj.size));
+        if (obj.type == "bike") {
+            model = mult(model, translate(obj.position));
+            model = mult(model, translate([-0.5, 0, -0.5]));
+        }
+        else if (obj.type == "arena") {
+            model = mult(model, translate(obj.position));
+            model = mult(model, scale(obj.size));
+        }
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
         // Configure texture, if defined
