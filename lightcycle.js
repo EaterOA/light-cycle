@@ -72,6 +72,9 @@ function World()
     var dullahan = new CpuBike([50, 0, 50]);
     this.objects.push(dullahan);
     
+    var kyoani = new Wall([10, 0, 100], [400, 0, 100]);
+    this.objects.push(kyoani);
+
     this.arena = arena;
     this.player = ufotable;
     //this.player = dullahan;
@@ -206,6 +209,16 @@ CpuBike.prototype.update = function(world)
     }
 }
 
+function Wall(start, end)
+{
+    if (typeof(end) == 'undefined')
+        end = start.slice();
+
+    this.type = "wall";
+    this.start = start;
+    this.end = end;
+}
+
 World.prototype.update = function(time)
 {
     time /= 1000.0;
@@ -256,6 +269,20 @@ function initializeGeometry()
     geo.ambient = [0.7, 0.5, 0.8];
     geo.diffuse = [0.2, 0.31, 0.35];
     geo.specular = [0.5, 0.5, 0.5];
+    geo.shininess = 4.0;
+
+    geo = geometry.wall = {};
+    shape = makeCube();
+    geo.vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.vertices), gl.STATIC_DRAW);
+    geo.normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.normals), gl.STATIC_DRAW);
+    geo.numVertices = shape.vertices.length;
+    geo.ambient = [0.7, 0.8, 1.0];
+    geo.diffuse = [0.7, 0.51, 0.95];
+    geo.specular = [0.3, 0.1, 0.8];
     geo.shininess = 4.0;
 }
 
@@ -330,6 +357,15 @@ function render(time)
         else if (obj.type == "arena") {
             model = mult(model, translate(obj.position));
             model = mult(model, scale(obj.size));
+        }
+        else if (obj.type == "wall") {
+            var v = subtract(obj.end, obj.start);
+            var size = [0.2, 5, length(v)];
+            var angle = angleBetweenY([0, 0, 1], v);
+            model = mult(model, translate(obj.start));
+            model = mult(model, rotate(angle, [0, 1, 0]));
+            model = mult(model, translate(-size[0], 0, 0));
+            model = mult(model, scale(size));
         }
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
