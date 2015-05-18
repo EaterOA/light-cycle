@@ -100,8 +100,18 @@ function normal(a, b, c)
     return normalize(cross(v, u));
 }
 
+// Scales the components of vector v by s
 function stretch(s, v)
 {
     for (var i = 0; i < v.length; i++)
         v[i] = s * v[i];
+}
+
+// Finds the angle between two vectors on the XZ plane
+// Rotating v by this angle with the Y axis should yield u
+function angleBetweenY(v, u)
+{
+    var dotp = dot(v, u);
+    var crossp = cross(v, u);
+    return degrees(Math.atan2(crossp[1], dotp));
 }
