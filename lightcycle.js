@@ -10,6 +10,7 @@ var cameraPosition = [1, 10, 20];
 var cameraX = -11;
 var cameraY = 0;
 var cameraFov = 50;
+var bikeCount = 0;
 
 window.onload = function init()
 {
@@ -97,12 +98,13 @@ World.prototype.addBike = function(type)
     }
     var range = this.arena.size;
     var pos = [rand(0, range[0]), 0, rand(0, range[2])];
-    var bike = new type(pos);
+    var bike = new type(pos, bikeCount);
+    bikeCount++;
     this.bikes.push(bike);
     this.objects.push(bike);
 }
 
-function Bike(pos)
+function Bike(pos, id)
 {
     this.type = "bike";
     this.position = pos.slice();
@@ -110,6 +112,7 @@ function Bike(pos)
     this.dir = 0;
     this.currentWall = null;
     this.prevWall = null;
+    this.id = id;
     this.pushWall();
 }
 
@@ -120,6 +123,19 @@ Bike.prototype.turn = function(right)
     else
         this.dir = (this.dir + 3) % 4;
     this.pushWall();
+}
+
+Bike.prototype.removeWalls = function()
+{
+    var objs = world.objects;
+    for(var i = 0; i < objs.length; i++)
+    {
+        if(objs[i].id == this.id && objs[i].type == "wall")
+        {
+            objs.splice(i, 1);
+            i--;
+        }
+    }
 }
 
 Bike.prototype.update = function(world)
@@ -135,6 +151,7 @@ Bike.prototype.update = function(world)
     if (this.dir == 2) next[0] -= dist;
     if (this.dir == 3) next[2] -= dist;
 
+
     // Detection collision with wall
     for (var i = 0; i < world.objects.length; i++) {
         var obj = world.objects[i];
@@ -146,11 +163,13 @@ Bike.prototype.update = function(world)
                 (pos[2] > obj.start[2]) ^ (pos[2] > obj.end[2])) {
             this.dead = true;
             next[0] = obj.start[0];
+            this.removeWalls();
         }
         else if ((obj.start[2] > pos[2]) ^ (obj.start[2] > next[2]) &&
                 (pos[0] > obj.start[0]) ^ (pos[0] > obj.end[0])) {
             this.dead = true;
             next[2] = obj.start[2];
+            this.removeWalls();
         }
     }
 
@@ -160,6 +179,7 @@ Bike.prototype.update = function(world)
         this.dead = true;
         next[0] = Math.max(0, Math.min(next[0], world.arena.size[0]))
         next[2] = Math.max(0, Math.min(next[2], world.arena.size[2]))
+        this.removeWalls();
     }
 
     this.position = next;
@@ -168,17 +188,20 @@ Bike.prototype.update = function(world)
 
 Bike.prototype.pushWall = function()
 {
-    var maki = new Wall(this.position, this.position, this.dir);
-    world.objects.push(maki);
-    this.prevWall = this.currentWall;
-    this.currentWall = maki;
+    if(!this.dead)
+    {
+        var maki = new Wall(this.position, this.position, this.dir, this.id);
+        world.objects.push(maki);
+        this.prevWall = this.currentWall;
+        this.currentWall = maki;
+    }
 }
 
 PcBike.prototype = Object.create(Bike.prototype);
 PcBike.prototype.constructor = PcBike;
-function PcBike(pos)
+function PcBike(pos, id)
 {
-    Bike.call(this, pos);
+    Bike.call(this, pos, id);
     addEventListener("keydown", function(e) {
         if (e.keyCode == 74) { // j
             this.turn(false);
@@ -191,9 +214,9 @@ function PcBike(pos)
 
 CpuBike.prototype = Object.create(Bike.prototype);
 CpuBike.prototype.constructor = CpuBike;
-function CpuBike(pos)
+function CpuBike(pos, id)
 {
-    Bike.call(this, pos);
+    Bike.call(this, pos, id);
 }
 
 CpuBike.prototype.update = function(world)
@@ -229,12 +252,13 @@ CpuBike.distanceFromWall = function(pos, dir)
     throw "distanceFromWall: illegal dir";
 }
 
-function Wall(start, end, dir)
+function Wall(start, end, dir, id)
 {
     this.type = "wall";
     this.start = start.slice();
     this.end = end.slice();
     this.dir = dir;
+    this.id = id;
 }
 
 Wall.prototype.extend = function(amt)
