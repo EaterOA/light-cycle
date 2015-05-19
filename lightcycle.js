@@ -123,6 +123,7 @@ Bike.prototype.turn = function(right)
 Bike.prototype.update = function(world)
 {
     var dist = world.elapsed * this.spd;
+
     if (this.dir == 0)
         this.position[0] = Math.min(this.position[0] + dist, world.arena.size[2]);
     else if (this.dir == 1)
@@ -132,12 +133,12 @@ Bike.prototype.update = function(world)
     else if (this.dir == 3)
         this.position[2] = Math.max(this.position[2] - dist, 0);
 
-    this.currentWall.extend(dist, this.dir);
+    this.currentWall.extendTo(this.position);
 }
 
 Bike.prototype.pushWall = function()
 {
-    var maki = new Wall(this.position);
+    var maki = new Wall(this.position, this.position, this.dir);
     world.objects.push(maki);
     this.currentWall = maki;
 }
@@ -197,26 +198,30 @@ CpuBike.distanceFromWall = function(pos, dir)
     throw "distanceFromWall: illegal dir";
 }
 
-function Wall(start, end)
+function Wall(start, end, dir)
 {
-    if (typeof(end) == 'undefined')
-        end = start;
-
     this.type = "wall";
     this.start = start.slice();
     this.end = end.slice();
+    this.dir = dir;
 }
 
-Wall.prototype.extend = function(amt, dir)
+Wall.prototype.extend = function(amt)
 {
-    if (dir == 0)
+    if (this.dir == 0)
         this.end[0] += amt;
-    else if (dir == 1)
+    else if (this.dir == 1)
         this.end[2] += amt;
-    else if (dir == 2)
-        this.start[0] -= amt;
-    else if (dir == 3)
-        this.start[2] -= amt;
+    else if (this.dir == 2)
+        this.end[0] -= amt;
+    else if (this.dir == 3)
+        this.end[2] -= amt;
+}
+
+Wall.prototype.extendTo = function(pos)
+{
+    this.end[0] = pos[0];
+    this.end[2] = pos[2];
 }
 
 function initializeGeometry()
