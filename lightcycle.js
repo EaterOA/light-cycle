@@ -49,7 +49,7 @@ window.onload = function init()
     toggleAttrib("vPosition", true);
     setUniform(gl.uniform1i, "texture", 0);
     setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(geometry.light.position)));
-    
+
     // First frame
     requestAnimFrame(render);
 }
@@ -71,9 +71,6 @@ function World()
 
     var dullahan = new CpuBike([50, 0, 50]);
     this.objects.push(dullahan);
-    
-    var kyoani = new Wall([10, 0, 100], [400, 0, 100]);
-    this.objects.push(kyoani);
 
     this.arena = arena;
     this.player = ufotable;
@@ -115,7 +112,7 @@ Bike.prototype.update = function(world)
         this.position[0] = Math.max(this.position[0] - dist, 0);
     else if (this.dir == 3)
         this.position[2] = Math.max(this.position[2] - dist, 0);
-    
+
     this.drawWall();
 }
 
@@ -129,7 +126,7 @@ Bike.prototype.pushWall = function()
 {
     var maki = new Wall(this.startWall, this.position.slice());
     world.objects.push(maki);
-    this.startWall = this.position.slice();        
+    this.startWall = this.position.slice();
 }
 
 CpuBike.prototype = new Bike();
@@ -153,7 +150,7 @@ CpuBike.prototype.pushWall = function()
 {
     var maki = new Wall(this.startWall, this.position.slice());
     world.objects.push(maki);
-    this.startWall = this.position.slice();        
+    this.startWall = this.position.slice();
 }
 
 
@@ -166,7 +163,7 @@ CpuBike.prototype.update = function(world)
         var t = Math.min(this.position[0] + dist, world.arena.size[2] - pika);
         if (t == world.arena.size[2] - pika)
         {
-            var tt = Math.min(this.position[2] + dist, world.arena.size[0] - pika);            
+            var tt = Math.min(this.position[2] + dist, world.arena.size[0] - pika);
             this.pushWall();
             if (tt == world.arena.size[0] - pika)
             {
@@ -181,7 +178,7 @@ CpuBike.prototype.update = function(world)
         }
         else
             this.position[0] = t;
-    }        
+    }
     else if (this.dir == 1)
     {
         var t = Math.min(this.position[2] + dist, world.arena.size[0] - pika);
@@ -245,7 +242,7 @@ CpuBike.prototype.update = function(world)
         else
             this.position[2] = t;
     }
-    
+
     this.drawWall();
 }
 
@@ -344,7 +341,7 @@ function initializeGeometry()
         var model = identity();
         model = mult(model, translate(obj.start));
         model = mult(model, rotate(angle, [0, 1, 0]));
-        model = mult(model, translate(-size[0], 0, 0));
+        model = mult(model, translate(-size[0] / 2, 0, 0));
         model = mult(model, scale(size));
         return model;
     }
