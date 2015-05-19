@@ -1,3 +1,18 @@
+// ------------- utilities --------------
+
+// For backwards compatibility
+if(!Object.create)
+{
+    Object.create=function(o){
+        function F(){}
+        F.prototype=o;
+        return new F();
+    }
+}
+
+
+// ------------- geometry -------------
+
 // Converts radians to degrees
 function degrees(r)
 {

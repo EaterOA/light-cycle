@@ -82,8 +82,8 @@ function World()
 function Bike(pos)
 {
     this.type = "bike";
-    this.position = pos;
-    this.startWall = [0, 0, 0]; //temp
+    this.position = pos.slice();
+    this.startWall = pos.slice(); //temp
     this.spd = 100.0;
     this.dir = 0;
 }
@@ -129,15 +129,11 @@ Bike.prototype.pushWall = function()
     this.startWall = this.position.slice();
 }
 
-CpuBike.prototype = new Bike();
+CpuBike.prototype = Object.create(Bike.prototype);
 CpuBike.prototype.constructor = CpuBike;
 function CpuBike(pos)
 {
-    this.type = "bike";
-    this.position = pos;
-    this.startWall = [50, 0, 50]; //temp
-    this.spd = 100.0;
-    this.dir = 0;
+    Bike.call(this, pos);
 }
 
 CpuBike.prototype.drawWall = function()
@@ -145,14 +141,6 @@ CpuBike.prototype.drawWall = function()
     var kyoani = new Wall(this.startWall, this.position);
     world.objects[4] = kyoani;  //temp index
 }
-
-CpuBike.prototype.pushWall = function()
-{
-    var maki = new Wall(this.startWall, this.position.slice());
-    world.objects.push(maki);
-    this.startWall = this.position.slice();
-}
-
 
 CpuBike.prototype.update = function(world)
 {
