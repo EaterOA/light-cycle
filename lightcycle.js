@@ -76,14 +76,13 @@ function World()
     this.player = ufotable;
     //this.player = dullahan;
     addEventListener("keydown", this.player.controls.bind(this.player));
-
 }
 
 function Bike(pos)
 {
     this.type = "bike";
     this.position = pos.slice();
-    this.startWall = pos.slice(); //temp
+    this.currentWall = null;
     this.spd = 100.0;
     this.dir = 0;
 }
@@ -109,6 +108,9 @@ Bike.prototype.controls = function(e)
 
 Bike.prototype.update = function(world)
 {
+    if (!this.currentWall)
+        this.pushWall();
+
     var dist = world.elapsed * this.spd;
     if (this.dir == 0)
         this.position[0] = Math.min(this.position[0] + dist, world.arena.size[2]);
@@ -119,20 +121,14 @@ Bike.prototype.update = function(world)
     else if (this.dir == 3)
         this.position[2] = Math.max(this.position[2] - dist, 0);
 
-    this.drawWall();
-}
-
-Bike.prototype.drawWall = function()
-{
-    var kyoani = new Wall(this.startWall, this.position);
-    world.objects[3] = kyoani; //temp index
+    this.currentWall.extend(dist, this.dir);
 }
 
 Bike.prototype.pushWall = function()
 {
-    var maki = new Wall(this.startWall, this.position.slice());
+    var maki = new Wall(this.position);
     world.objects.push(maki);
-    this.startWall = this.position.slice();
+    this.currentWall = maki;
 }
 
 CpuBike.prototype = Object.create(Bike.prototype);
@@ -140,12 +136,6 @@ CpuBike.prototype.constructor = CpuBike;
 function CpuBike(pos)
 {
     Bike.call(this, pos);
-}
-
-CpuBike.prototype.drawWall = function()
-{
-    var kyoani = new Wall(this.startWall, this.position);
-    world.objects[4] = kyoani;  //temp index
 }
 
 CpuBike.prototype.update = function(world)
@@ -184,11 +174,23 @@ CpuBike.distanceFromWall = function(pos, dir)
 function Wall(start, end)
 {
     if (typeof(end) == 'undefined')
-        end = start.slice();
+        end = start;
 
     this.type = "wall";
-    this.start = start;
-    this.end = end;
+    this.start = start.slice();
+    this.end = end.slice();
+}
+
+Wall.prototype.extend = function(amt, dir)
+{
+    if (dir == 0)
+        this.end[0] += amt;
+    else if (dir == 1)
+        this.end[2] += amt;
+    else if (dir == 2)
+        this.start[0] -= amt;
+    else if (dir == 3)
+        this.start[2] -= amt;
 }
 
 World.prototype.update = function(time)
