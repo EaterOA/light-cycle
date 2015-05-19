@@ -88,21 +88,27 @@ function Bike(pos)
     this.dir = 0;
 }
 
+Bike.prototype.turn = function(right)
+{
+    if (right)
+        this.dir = (this.dir + 1) % 4;
+    else
+        this.dir = (this.dir + 3) % 4;
+    this.pushWall();
+}
+
 Bike.prototype.controls = function(e)
 {
     if (e.keyCode == 74) { // j
-        this.dir = (this.dir + 3) % 4;
-        this.pushWall();
+        this.turn(false);
     }
     else if (e.keyCode == 75) { // k
-        this.dir = (this.dir + 1) % 4;
-        this.pushWall();
+        this.turn(true);
     }
 }
 
 Bike.prototype.update = function(world)
 {
-
     var dist = world.elapsed * this.spd;
     if (this.dir == 0)
         this.position[0] = Math.min(this.position[0] + dist, world.arena.size[2]);
@@ -146,92 +152,33 @@ CpuBike.prototype.update = function(world)
 {
     var pika = 10;
     var dist = world.elapsed * this.spd;
-    if (this.dir == 0)
-    {
-        var t = Math.min(this.position[0] + dist, world.arena.size[2] - pika);
-        if (t == world.arena.size[2] - pika)
-        {
-            var tt = Math.min(this.position[2] + dist, world.arena.size[0] - pika);
-            this.pushWall();
-            if (tt == world.arena.size[0] - pika)
-            {
-                this.position[2] = this.position[2] - dist;
-                this.dir = 3;
-            }
-            else
-            {
-                this.position[2] = tt;
-                this.dir = 1;
-            }
-        }
+    var cdist = CpuBike.distanceFromWall(this.position, this.dir);
+    if (cdist - dist <= pika) {
+        var rcdist = CpuBike.distanceFromWall(this.position, (this.dir + 1)%4);
+        var lcdist = CpuBike.distanceFromWall(this.position, (this.dir + 3)%4);
+        if (rcdist > lcdist)
+            this.turn(true);
         else
-            this.position[0] = t;
+            this.turn(false);
     }
-    else if (this.dir == 1)
-    {
-        var t = Math.min(this.position[2] + dist, world.arena.size[0] - pika);
-        if (t == world.arena.size[0] - pika)
-        {
-            var tt = Math.max(this.position[0] - dist, pika);
-            this.pushWall();
-            if (tt == pika)
-            {
-                this.position[0] = this.position[0] + dist;
-                this.dir = 0;
-            }
-            else
-            {
-                this.position[0] = tt;
-                this.dir = 2;
-            }
-        }
-        else
-            this.position[2] = t;
-    }
-    else if (this.dir == 2)
-    {
-        var t = Math.max(this.position[0] - dist, pika);
-        if (t == pika)
-        {
-            var tt = Math.max(this.position[2] - dist, pika);
-            this.pushWall();
-            if (tt == pika)
-            {
-                this.position[2] = this.position[2] + dist;
-                this.dir = 1;
-            }
-            else
-            {
-                this.position[2] = tt;
-                this.dir = 3;
-            }
-        }
-        else
-            this.position[0] = t;
-    }
-    else if (this.dir == 3)
-    {
-        var t = Math.max(this.position[2] - dist, pika);
-        if (t == pika)
-        {
-            var tt = Math.min(this.position[0] + dist, world.arena.size[2] - pika);
-            this.pushWall();
-            if (tt == world.arena.size[2] - pika)
-            {
-                this.position[0] = this.position[0] - dist;
-                this.dir = 2;
-            }
-            else
-            {
-                this.position[0] = tt;
-                this.dir = 0;
-            }
-        }
-        else
-            this.position[2] = t;
-    }
+    Bike.prototype.update.call(this, world);
+}
 
-    this.drawWall();
+CpuBike.distanceFromWall = function(pos, dir)
+{
+    if (dir == 0) {
+        return world.arena.size[0] - pos[0];
+    }
+    if (dir == 1) {
+        return world.arena.size[2] - pos[2];
+    }
+    if (dir == 2) {
+        return pos[0];
+    }
+    if (dir == 3) {
+        return pos[2];
+    }
+    throw "distanceFromWall: illegal dir";
 }
 
 function Wall(start, end)
@@ -243,7 +190,6 @@ function Wall(start, end)
     this.start = start;
     this.end = end;
 }
-
 
 World.prototype.update = function(time)
 {
