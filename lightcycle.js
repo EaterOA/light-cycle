@@ -72,10 +72,8 @@ function World()
     var dullahan = new CpuBike([50, 0, 50]);
     this.objects.push(dullahan);
     
-    for (var i = 0; i < 200; i++) {
     var kyoani = new Wall([10, 0, 100], [400, 0, 100]);
     this.objects.push(kyoani);
-    }
 
     this.arena = arena;
     this.player = ufotable;
@@ -300,7 +298,7 @@ function initializeGeometry()
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.texCoords), gl.STATIC_DRAW);
     geo.generateModel = function(obj) {
-        var model = mat4();
+        var model = identity();
         model = mult(model, translate(obj.position));
         model = mult(model, scale(obj.size));
         return model;
@@ -320,7 +318,7 @@ function initializeGeometry()
     geo.specular = [0.5, 0.5, 0.5];
     geo.shininess = 4.0;
     geo.generateModel = function(obj) {
-        var model = mat4();
+        var model = identity();
         model = mult(model, translate(obj.position));
         model = mult(model, translate([-0.5, 0, -0.5]));
         return model;
@@ -340,10 +338,10 @@ function initializeGeometry()
     geo.specular = [0.3, 0.1, 0.8];
     geo.shininess = 3.0;
     geo.generateModel = function(obj) {
-        var model = mat4();
         var v = subtract(obj.end, obj.start);
         var size = [0.2, 3, length(v)];
         var angle = angleBetweenY([0, 0, 1], v);
+        var model = identity();
         model = mult(model, translate(obj.start));
         model = mult(model, rotate(angle, [0, 1, 0]));
         model = mult(model, translate(-size[0], 0, 0));
@@ -393,7 +391,7 @@ function render(time)
     }
 
     // Adjust view
-    var view = mat4();
+    var view = identity();
     view = mult(view, rotate(-cameraX, [1, 0, 0]));
     view = mult(view, rotate(-cameraY, [0, 1, 0]));
     view = mult(view, translate(negate(cameraPosition)));

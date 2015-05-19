@@ -284,19 +284,18 @@ function mult( u, v )
             }
         }
 
+        result = identity();
+
         for ( var i = 0; i < u.length; ++i ) {
-            result.push( [] );
 
             for ( var j = 0; j < v.length; ++j ) {
                 var sum = 0.0;
                 for ( var k = 0; k < u.length; ++k ) {
                     sum += u[i][k] * v[k][j];
                 }
-                result[i].push( sum );
+                result[i][j] = sum;
             }
         }
-
-        result.matrix = true;
 
         return result;
     }
@@ -318,6 +317,20 @@ function mult( u, v )
 //  Basic Transformation Matrix Generators
 //
 
+function identity()
+{
+    var result = [
+        [1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ];
+    result.matrix = true;
+    return result;
+}
+
+//----------------------------------------------------------------------------
+
 function translate( x, y, z )
 {
     if ( Array.isArray(x) && x.length == 3 ) {
@@ -326,7 +339,7 @@ function translate( x, y, z )
         x = x[0];
     }
 
-    var result = mat4();
+    var result = identity();
     result[0][3] = x;
     result[1][3] = y;
     result[2][3] = z;
@@ -368,7 +381,7 @@ function scale( x, y, z )
         x = x[0];
     }
 
-    var result = mat4();
+    var result = identity();
     result[0][0] = x;
     result[1][1] = y;
     result[2][2] = z;
@@ -396,7 +409,7 @@ function lookAt( eye, at, up )
     }
 
     if ( equal(eye, at) ) {
-        return mat4();
+        return identity();
     }
 
     var v = normalize( subtract(at, eye) );  // view direction vector
@@ -430,7 +443,7 @@ function ortho( left, right, bottom, top, near, far )
     var h = top - bottom;
     var d = far - near;
 
-    var result = mat4();
+    var result = identity();
     result[0][0] = 2.0 / w;
     result[1][1] = 2.0 / h;
     result[2][2] = -2.0 / d;
@@ -448,7 +461,7 @@ function perspective( fovy, aspect, near, far )
     var f = 1.0 / Math.tan( radians(fovy) / 2 );
     var d = far - near;
 
-    var result = mat4();
+    var result = identity();
     result[0][0] = f / aspect;
     result[1][1] = f;
     result[2][2] = -(near + far) / d;
