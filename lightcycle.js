@@ -66,7 +66,7 @@ function World()
     arena.size = [1000, 1000, 1000];
     this.objects.push(arena);
 
-    var ufotable = new Bike([0, 0, 0]);
+    var ufotable = new PcBike([0, 0, 0]);
     this.objects.push(ufotable);
 
     var dullahan = new CpuBike([50, 0, 50]);
@@ -75,7 +75,6 @@ function World()
     this.arena = arena;
     this.player = ufotable;
     //this.player = dullahan;
-    addEventListener("keydown", this.player.controls.bind(this.player));
 }
 
 function Bike(pos)
@@ -94,16 +93,6 @@ Bike.prototype.turn = function(right)
     else
         this.dir = (this.dir + 3) % 4;
     this.pushWall();
-}
-
-Bike.prototype.controls = function(e)
-{
-    if (e.keyCode == 74) { // j
-        this.turn(false);
-    }
-    else if (e.keyCode == 75) { // k
-        this.turn(true);
-    }
 }
 
 Bike.prototype.update = function(world)
@@ -129,6 +118,22 @@ Bike.prototype.pushWall = function()
     var maki = new Wall(this.position);
     world.objects.push(maki);
     this.currentWall = maki;
+}
+
+PcBike.prototype = Object.create(Bike.prototype);
+PcBike.prototype.constructor = PcBike;
+function PcBike(pos)
+{
+    Bike.call(this, pos);
+    var myself = this;
+    addEventListener("keydown", function(e) {
+        if (e.keyCode == 74) { // j
+            this.turn(false);
+        }
+        else if (e.keyCode == 75) { // k
+            this.turn(true);
+        }
+    }.bind(this));
 }
 
 CpuBike.prototype = Object.create(Bike.prototype);
