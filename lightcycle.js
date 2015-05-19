@@ -108,6 +108,8 @@ function Bike(pos)
     this.position = pos.slice();
     this.spd = 100.0;
     this.dir = 0;
+    this.currentWall = null;
+    this.prevWall = null;
     this.pushWall();
 }
 
@@ -122,17 +124,45 @@ Bike.prototype.turn = function(right)
 
 Bike.prototype.update = function(world)
 {
+    if (this.dead)
+        return;
+
     var dist = world.elapsed * this.spd;
+    var pos = this.position;
+    var next = pos.slice();
+    if (this.dir == 0) next[0] += dist;
+    if (this.dir == 1) next[2] += dist;
+    if (this.dir == 2) next[0] -= dist;
+    if (this.dir == 3) next[2] -= dist;
 
-    if (this.dir == 0)
-        this.position[0] = Math.min(this.position[0] + dist, world.arena.size[2]);
-    else if (this.dir == 1)
-        this.position[2] = Math.min(this.position[2] + dist, world.arena.size[0]);
-    else if (this.dir == 2)
-        this.position[0] = Math.max(this.position[0] - dist, 0);
-    else if (this.dir == 3)
-        this.position[2] = Math.max(this.position[2] - dist, 0);
+    // Detection collision with wall
+    for (var i = 0; i < world.objects.length; i++) {
+        var obj = world.objects[i];
+        if (obj.type != "wall")
+            continue;
+        if (obj == this.currentWall || obj == this.prevWall)
+            continue;
+        if ((obj.start[0] > pos[0]) ^ (obj.start[0] > next[0]) &&
+                (pos[2] > obj.start[2]) ^ (pos[2] > obj.end[2])) {
+            this.dead = true;
+            next[0] = obj.start[0];
+        }
+        else if ((obj.start[2] > pos[2]) ^ (obj.start[2] > next[2]) &&
+                (pos[0] > obj.start[0]) ^ (pos[0] > obj.end[0])) {
+            this.dead = true;
+            next[2] = obj.start[2];
+        }
+    }
 
+    // Detect collision with arena boundary
+    if (next[0] <= 0 || next[0] >= world.arena.size[0] ||
+            next[2] <= 0 || next[2] >= world.arena.size[2]) {
+        this.dead = true;
+        next[0] = Math.max(0, Math.min(next[0], world.arena.size[0]))
+        next[2] = Math.max(0, Math.min(next[2], world.arena.size[2]))
+    }
+
+    this.position = next;
     this.currentWall.extendTo(this.position);
 }
 
@@ -140,6 +170,7 @@ Bike.prototype.pushWall = function()
 {
     var maki = new Wall(this.position, this.position, this.dir);
     world.objects.push(maki);
+    this.prevWall = this.currentWall;
     this.currentWall = maki;
 }
 
