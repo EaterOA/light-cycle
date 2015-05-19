@@ -10,6 +10,12 @@ if(!Object.create)
     }
 }
 
+// Returns a random float between low and high
+function rand(low, high)
+{
+    return Math.random() * (high-low) + low;
+}
+
 
 // ------------- geometry -------------
 

@@ -40,6 +40,10 @@ window.onload = function init()
 
     // Create game world / logic controller
     world = new World();
+    world.addBike(PcBike);
+    world.player = world.bikes[0];
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
 
     // Create the geometry used in World objects
     initializeGeometry();
@@ -58,6 +62,8 @@ function World()
 {
     this.time = 0;
     this.elapsed = 0;
+    this.bikes = [];
+    this.bikeLimit = 8;
     this.objects = [];
 
     var arena = {};
@@ -66,24 +72,43 @@ function World()
     arena.size = [1000, 1000, 1000];
     this.objects.push(arena);
 
-    var ufotable = new PcBike([0, 0, 0]);
-    this.objects.push(ufotable);
-
-    var dullahan = new CpuBike([50, 0, 50]);
-    this.objects.push(dullahan);
-
     this.arena = arena;
-    this.player = ufotable;
-    //this.player = dullahan;
+    this.player = null;
+}
+
+World.prototype.update = function(time)
+{
+    time /= 1000.0;
+    this.elapsed = time - this.time;
+    this.time = time;
+
+    for (var i = 0; i < this.objects.length; i++) {
+        var obj = this.objects[i];
+        if (obj.update)
+            obj.update(this);
+    }
+}
+
+World.prototype.addBike = function(type)
+{
+    if (this.bikes.length >= this.bikeLimit) {
+        console.log("addBike: reached bike limit");
+        return;
+    }
+    var range = this.arena.size;
+    var pos = [rand(0, range[0]), 0, rand(0, range[2])];
+    var bike = new type(pos);
+    this.bikes.push(bike);
+    this.objects.push(bike);
 }
 
 function Bike(pos)
 {
     this.type = "bike";
     this.position = pos.slice();
-    this.currentWall = null;
     this.spd = 100.0;
     this.dir = 0;
+    this.pushWall();
 }
 
 Bike.prototype.turn = function(right)
@@ -97,9 +122,6 @@ Bike.prototype.turn = function(right)
 
 Bike.prototype.update = function(world)
 {
-    if (!this.currentWall)
-        this.pushWall();
-
     var dist = world.elapsed * this.spd;
     if (this.dir == 0)
         this.position[0] = Math.min(this.position[0] + dist, world.arena.size[2]);
@@ -125,7 +147,6 @@ PcBike.prototype.constructor = PcBike;
 function PcBike(pos)
 {
     Bike.call(this, pos);
-    var myself = this;
     addEventListener("keydown", function(e) {
         if (e.keyCode == 74) { // j
             this.turn(false);
@@ -196,19 +217,6 @@ Wall.prototype.extend = function(amt, dir)
         this.start[0] -= amt;
     else if (dir == 3)
         this.start[2] -= amt;
-}
-
-World.prototype.update = function(time)
-{
-    time /= 1000.0;
-    this.elapsed = time - this.time;
-    this.time = time;
-
-    for (var i = 0; i < this.objects.length; i++) {
-        var obj = this.objects[i];
-        if (obj.update)
-            obj.update(this);
-    }
 }
 
 function initializeGeometry()
