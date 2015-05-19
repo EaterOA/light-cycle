@@ -72,8 +72,10 @@ function World()
     var dullahan = new CpuBike([50, 0, 50]);
     this.objects.push(dullahan);
     
-    //var kyoani = new Wall([10, 0, 100], [400, 0, 100]);
-    //this.objects.push(kyoani);
+    for (var i = 0; i < 200; i++) {
+    var kyoani = new Wall([10, 0, 100], [400, 0, 100]);
+    this.objects.push(kyoani);
+    }
 
     this.arena = arena;
     this.player = ufotable;
@@ -404,68 +406,79 @@ function render(time)
     setUniform(gl.uniformMatrix4fv, "vProjection", flatten(projection));
 
     // Draw game objects
+    // prevGeo is a quick and dirty hack to detect state changes, because
+    // calling uniforms and rebinding buffers is expensive
+    var prevGeo = null;
     for (var i = 0; i < world.objects.length; i++) {
         var obj = world.objects[i];
         var geo = geometry[obj.type];
 
         // Switch vertex buffer
-        gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
-        setAttrib("vPosition", 4);
+        if (prevGeo !== geo) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
+            setAttrib("vPosition", 4);
+        }
 
         // Set model transform (depends heavily on object type)
         var model = geo.generateModel(obj);
         setUniform(gl.uniformMatrix4fv, "vModel", flatten(model));
 
         // Configure texture, if defined
-        if (geo.texture) {
-            toggleAttrib("vTexCoord", true);
-            setUniform(gl.uniform1i, "useTexture", true);
+        if (prevGeo !== geo) {
+            if (geo.texture) {
+                toggleAttrib("vTexCoord", true);
+                setUniform(gl.uniform1i, "useTexture", true);
 
-            // Switch texCoord buffer
-            gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
-            setAttrib("vTexCoord", 2);
+                // Switch texCoord buffer
+                gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
+                setAttrib("vTexCoord", 2);
 
-            // Configure texture filter
-            gl.bindTexture(gl.TEXTURE_2D, geo.texture);
-            var ext = (
-                gl.getExtension('EXT_texture_filter_anisotropic') ||
-                gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
-                gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
-            );
-            if (ext) {
-                var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-                gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
+                // Configure texture filter
+                gl.bindTexture(gl.TEXTURE_2D, geo.texture);
+                var ext = (
+                    gl.getExtension('EXT_texture_filter_anisotropic') ||
+                    gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+                    gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+                );
+                if (ext) {
+                    var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+                    gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
+                }
             }
-        }
-        else {
-            toggleAttrib("vTexCoord", false);
-            setUniform(gl.uniform1i, "useTexture", false);
+            else {
+                toggleAttrib("vTexCoord", false);
+                setUniform(gl.uniform1i, "useTexture", false);
+            }
         }
 
         // Configure lighting, if defined
-        if (geo.ambient) {
-            toggleAttrib("vNormal", true);
-            setUniform(gl.uniform1i, "useLighting", true);
+        if (prevGeo !== geo) {
+            if (geo.ambient) {
+                    toggleAttrib("vNormal", true);
+                    setUniform(gl.uniform1i, "useLighting", true);
 
-            // Switch normal buffer
-            gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
-            setAttrib("vNormal", 4);
+                // Switch normal buffer
+                gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+                setAttrib("vNormal", 4);
 
-            // Setting reflection stuff
-            var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
-            var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
-            var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
-            setUniform(gl.uniform4fv, "ambient", flatten(ambient));
-            setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
-            setUniform(gl.uniform4fv, "specular", flatten(specular));
-            setUniform(gl.uniform1f, "shininess", geo.shininess);
-        }
-        else {
-            toggleAttrib("vNormal", false);
-            setUniform(gl.uniform1i, "useLighting", false);
+                // Setting reflection stuff
+                var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
+                var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
+                var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
+                setUniform(gl.uniform4fv, "ambient", flatten(ambient));
+                setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
+                setUniform(gl.uniform4fv, "specular", flatten(specular));
+                setUniform(gl.uniform1f, "shininess", geo.shininess);
+            }
+            else {
+                toggleAttrib("vNormal", false);
+                setUniform(gl.uniform1i, "useLighting", false);
+            }
         }
 
         gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
+
+        prevGeo = geo;
     }
 
     // Ask the browser to schedule next frame for us
@@ -515,7 +528,14 @@ function handleKey(e)
 
 function setUniform(setterFn, key, value)
 {
-    var loc = gl.getUniformLocation(program, key);
+    if (!setUniform.cache)
+        setUniform.cache = {};
+
+    var loc = setUniform.cache[key];
+    if (typeof(loc) == "undefined") {
+        loc = gl.getUniformLocation(program, key);
+        setUniform.cache[key] = loc;
+    }
     if (setterFn == gl.uniformMatrix4fv) {
         gl.uniformMatrix4fv(loc, false, value);
     }
