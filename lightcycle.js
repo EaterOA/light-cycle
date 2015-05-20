@@ -223,16 +223,52 @@ CpuBike.prototype.update = function(world)
 {
     var pika = 10;
     var dist = world.elapsed * this.spd;
-    var cdist = CpuBike.distanceFromWall(this.position, this.dir);
+    var wdist = CpuBike.nearestWalls(this.position);
+    var cdist = wdist[this.dir];
+    var rcdist = wdist[(this.dir + 1) % 4];
+    var lcdist = wdist[(this.dir + 3) % 4];
     if (cdist - dist <= pika) {
-        var rcdist = CpuBike.distanceFromWall(this.position, (this.dir + 1)%4);
-        var lcdist = CpuBike.distanceFromWall(this.position, (this.dir + 3)%4);
+        //console.log(this.dir, lcdist, cdist, rcdist);
         if (rcdist > lcdist)
             this.turn(true);
         else
             this.turn(false);
     }
     Bike.prototype.update.call(this, world);
+}
+
+CpuBike.nearestWalls = function(pos)
+{
+    var x = pos[0];
+    var z = pos[2];
+    var objs = world.objects;
+    var dists = [world.arena.size[0] - x, world.arena.size[2] - z, x, z];
+    for (var i = 0; i < objs.length; i++)
+    {
+        if (objs[i].type == "wall")
+        {
+            var wall = objs[i];
+            if ((wall.start[0] <= x && x <= wall.end[0]) ||
+                (wall.end[0] <= x && x <= wall.start[0]))
+            {
+                var t = wall.start[2] - z;
+                if (t > 0 && t < dists[0])
+                    dists[1] = t;
+                else if (t < 0 && -t < dists[2])
+                    dists[3] = -t;
+            }
+            else if ((wall.start[2] <= z && z <= wall.end[2]) ||
+                (wall.end[2] <= z && z <= wall.start[2]))
+            {
+                var t = wall.start[0] - x;
+                if (t > 0 && t < dists[2])
+                    dists[0] = t;
+                else if (t < 0 && -t < dists[3])
+                    dists[2] = -t;
+            }
+        }
+    }
+    return dists;
 }
 
 CpuBike.distanceFromWall = function(pos, dir)
@@ -526,7 +562,7 @@ function handleKey(e)
         cameraX += -1;
     }
     else if (e.keyCode == 80) { // p (for debug purposes)
-        console.log(cameraPosition);
+        console.log(world.bikes[1].dir, flatten(CpuBike.nearestWalls(cameraPosition)));
     }
 }
 
