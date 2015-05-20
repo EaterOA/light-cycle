@@ -7,9 +7,9 @@ var world;
 var geometry;
 var aspect = 1.0;
 var cameraPosition = [1, 10, 20];
-var cameraX = -11;
+var cameraX = -10;
 var cameraY = 0;
-var cameraFov = 50;
+var cameraFov = 60;
 
 window.onload = function init()
 {
@@ -379,7 +379,7 @@ function initializeGeometry()
     geo.shininess = 3.0;
     geo.generateModel = function(obj) {
         var v = subtract(obj.end, obj.start);
-        var size = [0.2, 3, length(v)];
+        var size = [0.2, 2, length(v)];
         var angle = angleBetweenY([0, 0, 1], v);
         var model = identity();
         model = mult(model, translate(obj.start));
@@ -414,9 +414,10 @@ function render(time)
         var p = world.player;
 
         // Adjust direction
-        var nextAngle = 270 - p.dir * 90;
+        var nextAngle = normalizeAngle((270 - p.dir * 90) - 8);
         var diff = angleDiff(cameraY, nextAngle);
-        var rotateSpd = diff * 8 + (diff >= 0 ? 10 : -10);
+        var sign = (diff >= 0 ? 1.0 : -1.0);
+        var rotateSpd = sign * Math.pow(Math.abs(diff), 1.5);
         var rotateAmt = rotateSpd * world.elapsed;
         if (Math.abs(diff) < Math.abs(rotateAmt))
             cameraY = nextAngle;
@@ -426,7 +427,7 @@ function render(time)
 
         // Adjust position
         cameraPosition = p.position.slice();
-        var offset = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 6, 17));
+        var offset = transform(rotate(cameraY, [0, 1, 0]), vec4(-1.2, 7, 21));
         cameraPosition = add(cameraPosition, offset.slice(0,3));
     }
 
