@@ -97,7 +97,7 @@ World.prototype.addBike = function(type)
     }
     var range = this.arena.size;
     var pos = [rand(0, range[0]), 0, rand(0, range[2])];
-    var bike = new type(pos, this.objects.length);
+    var bike = new type(pos, this.bikes.length);
     this.bikes.push(bike);
     this.objects.push(bike);
 }
@@ -320,9 +320,6 @@ function initializeGeometry()
     geometry = {};
 
     geo = geometry.light = {};
-    geo.ambient = [0.4, 0.8, 0.8];
-    geo.diffuse = [0.8, 0.9, 0.9];
-    geo.specular = [0.8, 1.0, 0.9];
     geo.position = [500, 500, 500];
 
     geo = geometry.arena = {};
@@ -353,10 +350,27 @@ function initializeGeometry()
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.normals), gl.STATIC_DRAW);
     geo.numVertices = shape.vertices.length;
-    geo.ambient = [0.7, 0.5, 0.8];
-    geo.diffuse = [0.2, 0.31, 0.35];
-    geo.specular = [0.5, 0.5, 0.5];
-    geo.shininess = 4.0;
+    geo.lighting = function(obj) {
+        var res = {
+            ambient: [0.0, 0.0, 0.0],
+            diffuse: [0.0, 0.0, 0.0],
+            specular: [0.0, 0.0, 0.0],
+            shininess: 1.0,
+        }
+        if (obj.id == 0) {
+            res.ambient = [0.3, 0.5, 0.8];
+            res.diffuse = [0.2, 0.29, 0.55];
+        }
+        else if (obj.id == 1) {
+            res.ambient = [0.7, 0.3, 0.4];
+            res.diffuse = [0.6, 0.21, 0.15];
+        }
+        else if (obj.id == 2) {
+            res.ambient = [0.2, 0.8, 0.4];
+            res.diffuse = [0.3, 0.6, 0.25];
+        }
+        return res;
+    }
     geo.generateModel = function(obj) {
         var model = identity();
         model = mult(model, translate(obj.position));
@@ -373,10 +387,12 @@ function initializeGeometry()
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.normals), gl.STATIC_DRAW);
     geo.numVertices = shape.vertices.length;
-    geo.ambient = [0.7, 0.8, 1.0];
-    geo.diffuse = [0.7, 0.51, 0.95];
-    geo.specular = [0.3, 0.1, 0.8];
-    geo.shininess = 3.0;
+    geo.lighting = function (obj) {
+        var res = geometry.bike.lighting(obj);
+        stretch(1.1, res.ambient);
+        stretch(1.1, res.diffuse);
+        return res;
+    }
     geo.generateModel = function(obj) {
         var v = subtract(obj.end, obj.start);
         var size = [0.2, 2, length(v)];
@@ -491,25 +507,33 @@ function render(time)
         }
 
         // Configure lighting, if defined
-        if (prevGeo !== geo) {
-            if (geo.ambient) {
-                    toggleAttrib("vNormal", true);
-                    setUniform(gl.uniform1i, "useLighting", true);
+        if (geo.lighting) {
+            if (prevGeo !== geo) {
+                toggleAttrib("vNormal", true);
+                setUniform(gl.uniform1i, "useLighting", true);
 
                 // Switch normal buffer
                 gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
                 setAttrib("vNormal", 4);
+            }
 
-                // Setting reflection stuff
-                var ambient = mult(vec4(geometry.light.ambient), vec4(geo.ambient));
-                var diffuse = mult(vec4(geometry.light.diffuse), vec4(geo.diffuse));
-                var specular = mult(vec4(geometry.light.specular), vec4(geo.specular));
+            // Setting reflection stuff
+            var lighting = geo.lighting;
+            if (typeof(lighting) == "function") {
+                lighting = lighting(obj);
+            }
+            if (prevGeo.lighting != lighting) {
+                var ambient = vec4(lighting.ambient);
+                var diffuse = vec4(lighting.diffuse);
+                var specular = vec4(lighting.specular);
                 setUniform(gl.uniform4fv, "ambient", flatten(ambient));
                 setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
                 setUniform(gl.uniform4fv, "specular", flatten(specular));
-                setUniform(gl.uniform1f, "shininess", geo.shininess);
+                setUniform(gl.uniform1f, "shininess", lighting.shininess);
             }
-            else {
+        }
+        else {
+            if (prevGeo !== geo) {
                 toggleAttrib("vNormal", false);
                 setUniform(gl.uniform1i, "useLighting", false);
             }
