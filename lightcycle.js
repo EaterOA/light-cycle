@@ -10,7 +10,6 @@ var cameraPosition = [1, 10, 20];
 var cameraX = -11;
 var cameraY = 0;
 var cameraFov = 50;
-var bikeCount = 0;
 
 window.onload = function init()
 {
@@ -98,8 +97,7 @@ World.prototype.addBike = function(type)
     }
     var range = this.arena.size;
     var pos = [rand(0, range[0]), 0, rand(0, range[2])];
-    var bike = new type(pos, bikeCount);
-    bikeCount++;
+    var bike = new type(pos, this.objects.length);
     this.bikes.push(bike);
     this.objects.push(bike);
 }
