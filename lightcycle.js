@@ -6,6 +6,7 @@ var program;
 var world;
 var geometry;
 var camera;
+var controller;
 
 window.onload = function init()
 {
@@ -33,6 +34,9 @@ window.onload = function init()
     // Compile shaders
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
+
+    // Create controller handler
+    controller = new Controller();
 
     // Create camera object
     camera = new Camera(aspect);
@@ -62,32 +66,92 @@ function Camera(aspect)
     this.fovx = 60;
     this.position = [1, 10, 20];
     this.rotation = [-10, 0];
-    this.playerRotation = -8;
+    this.free = false;
 
-    addEventListener("keydown", this.controls.bind(this));
+    addEventListener("keydown", function(e) {
+        if (e.keyCode == 70) // f
+            this.free = !this.free;
+    }.bind(this));
 }
 
 Camera.prototype.update = function()
 {
-    if (world.player) {
-        var p = world.player;
+    // Update according to player perspective
+    if (world.player && !this.free) {
+
+        // Attached rotation
+        if (controller.pressing[37]) // left
+            this.rotation[1] += 180 * world.elapsed;
+        if (controller.pressing[39]) // right
+            this.rotation[1] -= 180 * world.elapsed;
+
+        // State adjustments based on player actions
+        var bikeTurned = this.bikePrevDir != world.player.dir;
+        if (bikeTurned)
+            this.fullOffset = true;
+        this.bikePrevDir = world.player.dir;
+        var rotating = controller.pressing[37] || controller.pressing[39];
+        if (rotating)
+            this.fullOffset = false;
 
         // Adjust direction
-        var nextAngle = normalizeAngle((270 - p.dir * 90) + this.playerRotation);
-        var diff = angleDiff(this.rotation[1], nextAngle);
-        var sign = (diff >= 0 ? 1.0 : -1.0);
-        var rotateSpd = sign * Math.pow(Math.abs(diff), 1.5);
-        var rotateAmt = rotateSpd * world.elapsed;
-        if (Math.abs(diff) < Math.abs(rotateAmt))
-            this.rotation[1] = nextAngle;
-        else
-            this.rotation[1] += rotateAmt;
-        this.rotation[1] = normalizeAngle(this.rotation[1]);
+        var maxOffset = this.fullOffset ? 12 : 35;
+        var snapMult = rotating ? 1.2 : 1.5;
+        var curAngle = this.rotation[1];
+        var trueAngle = 270 - world.player.dir * 90;
+        if (-maxOffset > trueAngle-curAngle || trueAngle-curAngle > maxOffset) {
+            var diff = angleDiff(curAngle, trueAngle + maxOffset)
+            var diff2 = angleDiff(curAngle, trueAngle - maxOffset)
+            if (Math.abs(diff2) < Math.abs(diff))
+                diff = diff2;
+            var sign = (diff >= 0 ? 1.0 : -1.0);
+            var rotateSpd = sign * Math.pow(Math.abs(diff), snapMult);
+            curAngle += rotateSpd * world.elapsed;
+            this.rotation[1] = normalizeAngle(curAngle);
+        }
 
         // Adjust position
-        this.position = p.position.slice();
-        var offset = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1.2, 7, 21));
-        this.position = add(this.position, offset.slice(0,3));
+        var anchor = vec4(-1.2, 8.5, 30);
+        var nextPos = world.player.position.slice();
+        var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
+        nextPos = add(nextPos, offset.slice(0,3));
+        this.position = nextPos;
+    }
+
+    // Update according to free camera
+    else {
+        if (controller.pressing[37]) // left
+            this.rotation[1] += 120 * world.elapsed;
+        if (controller.pressing[39]) // right
+            this.rotation[1] += -120 * world.elapsed;
+        if (controller.pressing[38]) // up
+            this.position[1] += 100 * world.elapsed;
+        if (controller.pressing[40]) // down
+            this.position[1] += -100 * world.elapsed;
+        if (controller.pressing[87]) { // w
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[65]) { // a
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[83]) { // s
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[68]) { // d
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[90]) // z
+            this.rotation[0] += 50 * world.elapsed;
+        if (controller.pressing[88]) // x
+            this.rotation[0] += -50 * world.elapsed;
     }
 }
 
@@ -105,61 +169,6 @@ Camera.prototype.projection = function()
     var fovy = Math.atan(Math.tan(radians(this.fovx / 2)) / aspect);
     fovy = degrees(fovy) * 2;
     return perspective(fovy, this.aspect, 1, 5000);
-}
-
-Camera.prototype.controls = function(e)
-{
-    // Attached controls
-    if (world.player) {
-        if (e.keyCode == 37) { // left
-            this.playerRotation += 3;
-        }
-        else if (e.keyCode == 39) { // right
-            this.playerRotation -= 3;
-        }
-    }
-
-    // Free camera
-    else {
-        if (e.keyCode == 37) { // left
-            this.rotation[1] += 1;
-        }
-        else if (e.keyCode == 39) { // right
-            this.rotation[1] += -1;
-        }
-        else if (e.keyCode == 38) { // up
-            this.position[1] += 1;
-        }
-        else if (e.keyCode == 40) { // down
-            this.position[1] += -1;
-        }
-        else if (e.keyCode == 87) { // w
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        else if (e.keyCode == 65) { // a
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        else if (e.keyCode == 83) { // s
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        else if (e.keyCode == 68) { // d
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        else if (e.keyCode == 90) { // z
-            this.rotation[0] += 1;
-        }
-        else if (e.keyCode == 88) { // x
-            this.rotation[0] += -1;
-        }
-    }
-
-    if (e.keyCode == 80) { // p (for debug purposes)
-        console.log(world.bikes[1].dir, flatten(CpuBike.nearestWalls(cameraPosition)));
-    }
 }
 
 function World()
@@ -304,6 +313,7 @@ PcBike.prototype.constructor = PcBike;
 function PcBike(pos, id)
 {
     Bike.call(this, pos, id);
+
     addEventListener("keydown", function(e) {
         if (e.keyCode == 87) { // w
         }
@@ -657,4 +667,25 @@ function toggleAttrib(key, enable)
         gl.enableVertexAttribArray(loc);
     else
         gl.disableVertexAttribArray(loc);
+}
+
+function Controller()
+{
+    this.pressing = {};
+    addEventListener("keydown", this.keydown.bind(this));
+    addEventListener("keyup", this.keyup.bind(this));
+}
+
+Controller.prototype.keydown = function(e)
+{
+    this.pressing[e.keyCode] = true;
+
+    if (e.keyCode == 80) { // p (for debug purposes)
+        console.log(world.bikes[1].dir, flatten(CpuBike.nearestWalls(cameraPosition)));
+    }
+}
+
+Controller.prototype.keyup = function(e)
+{
+    this.pressing[e.keyCode] = false;
 }
