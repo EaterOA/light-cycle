@@ -2,14 +2,10 @@
 var gl;
 var program;
 
-// State variables
+// State trackers
 var world;
 var geometry;
-var aspect = 1.0;
-var cameraPosition = [1, 10, 20];
-var cameraX = -10;
-var cameraY = 0;
-var cameraFov = 60;
+var camera;
 
 window.onload = function init()
 {
@@ -38,6 +34,9 @@ window.onload = function init()
     program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
+    // Create camera object
+    camera = new Camera(aspect);
+
     // Create game world / logic controller
     world = new World();
     world.addBike(PcBike);
@@ -49,13 +48,118 @@ window.onload = function init()
     initializeGeometry();
 
     // Other set up
-    addEventListener("keydown", handleKey);
     toggleAttrib("vPosition", true);
     setUniform(gl.uniform1i, "texture", 0);
     setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(geometry.light.position)));
 
     // First frame
     requestAnimFrame(render);
+}
+
+function Camera(aspect)
+{
+    this.aspect = aspect;
+    this.fovx = 60;
+    this.position = [1, 10, 20];
+    this.rotation = [-10, 0];
+    this.playerRotation = -8;
+
+    addEventListener("keydown", this.controls.bind(this));
+}
+
+Camera.prototype.update = function()
+{
+    if (world.player) {
+        var p = world.player;
+
+        // Adjust direction
+        var nextAngle = normalizeAngle((270 - p.dir * 90) + this.playerRotation);
+        var diff = angleDiff(this.rotation[1], nextAngle);
+        var sign = (diff >= 0 ? 1.0 : -1.0);
+        var rotateSpd = sign * Math.pow(Math.abs(diff), 1.5);
+        var rotateAmt = rotateSpd * world.elapsed;
+        if (Math.abs(diff) < Math.abs(rotateAmt))
+            this.rotation[1] = nextAngle;
+        else
+            this.rotation[1] += rotateAmt;
+        this.rotation[1] = normalizeAngle(this.rotation[1]);
+
+        // Adjust position
+        this.position = p.position.slice();
+        var offset = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1.2, 7, 21));
+        this.position = add(this.position, offset.slice(0,3));
+    }
+}
+
+Camera.prototype.view = function()
+{
+    var view = identity();
+    view = mult(view, rotate(-this.rotation[0], [1, 0, 0]));
+    view = mult(view, rotate(-this.rotation[1], [0, 1, 0]));
+    view = mult(view, translate(negate(this.position)));
+    return view;
+}
+
+Camera.prototype.projection = function()
+{
+    var fovy = Math.atan(Math.tan(radians(this.fovx / 2)) / aspect);
+    fovy = degrees(fovy) * 2;
+    return perspective(fovy, this.aspect, 1, 5000);
+}
+
+Camera.prototype.controls = function(e)
+{
+    // Attached controls
+    if (world.player) {
+        if (e.keyCode == 37) { // left
+            this.playerRotation += 3;
+        }
+        else if (e.keyCode == 39) { // right
+            this.playerRotation -= 3;
+        }
+    }
+
+    // Free camera
+    else {
+        if (e.keyCode == 37) { // left
+            this.rotation[1] += 1;
+        }
+        else if (e.keyCode == 39) { // right
+            this.rotation[1] += -1;
+        }
+        else if (e.keyCode == 38) { // up
+            this.position[1] += 1;
+        }
+        else if (e.keyCode == 40) { // down
+            this.position[1] += -1;
+        }
+        else if (e.keyCode == 87) { // w
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        else if (e.keyCode == 65) { // a
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        else if (e.keyCode == 83) { // s
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        else if (e.keyCode == 68) { // d
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        else if (e.keyCode == 90) { // z
+            this.rotation[0] += 1;
+        }
+        else if (e.keyCode == 88) { // x
+            this.rotation[0] += -1;
+        }
+    }
+
+    if (e.keyCode == 80) { // p (for debug purposes)
+        console.log(world.bikes[1].dir, flatten(CpuBike.nearestWalls(cameraPosition)));
+    }
 }
 
 function World()
@@ -201,10 +305,14 @@ function PcBike(pos, id)
 {
     Bike.call(this, pos, id);
     addEventListener("keydown", function(e) {
-        if (e.keyCode == 74) { // j
+        if (e.keyCode == 87) { // w
+        }
+        else if (e.keyCode == 65) { // a
             this.turn(false);
         }
-        else if (e.keyCode == 75) { // k
+        else if (e.keyCode == 83) { // s
+        }
+        else if (e.keyCode == 68) { // d
             this.turn(true);
         }
     }.bind(this));
@@ -426,39 +534,9 @@ function render(time)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Adjust camera to player position and direction
-    if (world.player) {
-        var p = world.player;
-
-        // Adjust direction
-        var nextAngle = normalizeAngle((270 - p.dir * 90) - 8);
-        var diff = angleDiff(cameraY, nextAngle);
-        var sign = (diff >= 0 ? 1.0 : -1.0);
-        var rotateSpd = sign * Math.pow(Math.abs(diff), 1.5);
-        var rotateAmt = rotateSpd * world.elapsed;
-        if (Math.abs(diff) < Math.abs(rotateAmt))
-            cameraY = nextAngle;
-        else
-            cameraY += rotateAmt;
-        cameraY = normalizeAngle(cameraY);
-
-        // Adjust position
-        cameraPosition = p.position.slice();
-        var offset = transform(rotate(cameraY, [0, 1, 0]), vec4(-1.2, 7, 21));
-        cameraPosition = add(cameraPosition, offset.slice(0,3));
-    }
-
-    // Adjust view
-    var view = identity();
-    view = mult(view, rotate(-cameraX, [1, 0, 0]));
-    view = mult(view, rotate(-cameraY, [0, 1, 0]));
-    view = mult(view, translate(negate(cameraPosition)));
-    setUniform(gl.uniformMatrix4fv, "vView", flatten(view));
-
-    // Adjust projection
-    var fovy = Math.atan(Math.tan(radians(cameraFov / 2)) / aspect);
-    fovy = degrees(fovy) * 2;
-    projection = perspective(fovy, aspect, 1, 5000);
-    setUniform(gl.uniformMatrix4fv, "vProjection", flatten(projection));
+    camera.update()
+    setUniform(gl.uniformMatrix4fv, "vView", flatten(camera.view()));
+    setUniform(gl.uniformMatrix4fv, "vProjection", flatten(camera.projection()));
 
     // Draw game objects
     // prevGeo is a quick and dirty hack to detect state changes, because
@@ -546,47 +624,6 @@ function render(time)
 
     // Ask the browser to schedule next frame for us
     requestAnimFrame(render);
-}
-
-function handleKey(e)
-{
-    if (e.keyCode == 37) { // left
-        cameraY += 1;
-    }
-    else if (e.keyCode == 39) { // right
-        cameraY += -1;
-    }
-    else if (e.keyCode == 38) { // up
-        cameraPosition[1] += 1;
-    }
-    else if (e.keyCode == 40) { // down
-        cameraPosition[1] += -1;
-    }
-    else if (e.keyCode == 87) { // w
-        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 0, -1));
-        cameraPosition = add(cameraPosition, dir.slice(0,3));
-    }
-    else if (e.keyCode == 65) { // a
-        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(-1, 0, 0));
-        cameraPosition = add(cameraPosition, dir.slice(0,3));
-    }
-    else if (e.keyCode == 83) { // s
-        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(0, 0, 1));
-        cameraPosition = add(cameraPosition, dir.slice(0,3));
-    }
-    else if (e.keyCode == 68) { // d
-        var dir = transform(rotate(cameraY, [0, 1, 0]), vec4(1, 0, 0));
-        cameraPosition = add(cameraPosition, dir.slice(0,3));
-    }
-    else if (e.keyCode == 90) { // z
-        cameraX += 1;
-    }
-    else if (e.keyCode == 88) { // x
-        cameraX += -1;
-    }
-    else if (e.keyCode == 80) { // p (for debug purposes)
-        console.log(world.bikes[1].dir, flatten(CpuBike.nearestWalls(cameraPosition)));
-    }
 }
 
 function setUniform(setterFn, key, value)
