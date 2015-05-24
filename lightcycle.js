@@ -51,6 +51,17 @@ window.onload = function init()
     // Create the geometry used in World objects
     initializeGeometry();
 
+    // Configure texture filter
+    var ext = (
+        gl.getExtension('EXT_texture_filter_anisotropic') ||
+        gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+        gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+    );
+    if (ext) {
+        var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+        gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
+    }
+
     // Other set up
     toggleAttrib("vPosition", true);
     setUniform(gl.uniform1i, "texture", 0);
@@ -100,7 +111,8 @@ Camera.prototype.update = function()
         var snapMult = rotating ? 1.2 : 1.5;
         var curAngle = this.rotation[1];
         var trueAngle = 270 - world.player.dir * 90;
-        if (-maxOffset > trueAngle-curAngle || trueAngle-curAngle > maxOffset) {
+        var angleOffset = angleDiff(trueAngle, curAngle);
+        if (-maxOffset > angleOffset || angleOffset > maxOffset) {
             var diff = angleDiff(curAngle, trueAngle + maxOffset)
             var diff2 = angleDiff(curAngle, trueAngle - maxOffset)
             if (Math.abs(diff2) < Math.abs(diff))
@@ -469,41 +481,40 @@ function initializeGeometry()
         if (camera.position[0] >= world.arena.size[0]) trans.push(3);
         if (camera.position[0] <= 0) trans.push(4);
         if (camera.position[1] >= world.arena.size[1]) trans.push(5);
+        var vertices = [];
+        var texCoords = [];
         if (trans.length == 0) {
             if (!this.transparent)
                 return false;
             this.transparent = false;
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, flatten(this.shape.vertices), gl.DYNAMIC_DRAW);
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
-            gl.bufferData(gl.ARRAY_BUFFER, flatten(this.shape.texCoords), gl.DYNAMIC_DRAW);
-            return true;
+            vertices = this.shape.vertices;
+            texCoords = this.shape.texCoords;
         }
-        this.transparent = true;
-        var vertices = [];
-        var texCoords = [];
-        var colors = [];
-        for (var i = 0; i < 6; i++) {
-            if (trans.indexOf(i) == -1)
-                for (var j = 0; j < 6; j++) {
-                    vertices.push(this.shape.vertices[i*6+j]);
-                    texCoords.push(this.shape.texCoords[i*6+j]);
-                    colors.push([1.0, 1.0, 1.0, 1.0]);
-                }
-        }
-        for (var i = 0; i < trans.length; i++) {
-            for (var j = 0; j < 6; j++) {
-                vertices.push(this.shape.vertices[trans[i]*6+j]);
-                texCoords.push(this.shape.texCoords[trans[i]*6+j]);
-                colors.push([1.0, 1.0, 1.0, 0.3]);
+        else {
+            this.transparent = true;
+            var colors = [];
+            for (var i = 0; i < 6; i++) {
+                if (trans.indexOf(i) == -1)
+                    for (var j = 0; j < 6; j++) {
+                        vertices.push(this.shape.vertices[i*6+j]);
+                        texCoords.push(this.shape.texCoords[i*6+j]);
+                        colors.push([1.0, 1.0, 1.0, 1.0]);
+                    }
             }
+            for (var i = 0; i < trans.length; i++) {
+                for (var j = 0; j < 6; j++) {
+                    vertices.push(this.shape.vertices[trans[i]*6+j]);
+                    texCoords.push(this.shape.texCoords[trans[i]*6+j]);
+                    colors.push([1.0, 1.0, 1.0, 0.2]);
+                }
+            }
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.DYNAMIC_DRAW);
         }
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, flatten(texCoords), gl.DYNAMIC_DRAW);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.DYNAMIC_DRAW);
         return true;
     }
 
@@ -628,17 +639,6 @@ function render(time)
                 gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
                 setAttrib("vTexCoord", 2);
 
-                // Configure texture filter
-                gl.bindTexture(gl.TEXTURE_2D, geo.texture);
-                var ext = (
-                    gl.getExtension('EXT_texture_filter_anisotropic') ||
-                    gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
-                    gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
-                );
-                if (ext) {
-                    var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-                    gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
-                }
             }
             else {
                 toggleAttrib("vTexCoord", false);
