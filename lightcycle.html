@@ -9,6 +9,7 @@ precision mediump float;
 attribute vec4 vPosition;
 attribute vec4 vNormal;
 attribute vec2 vTexCoord;
+attribute vec4 vColor;
 
 uniform mat4 vModel;
 uniform mat4 vView;
@@ -16,9 +17,11 @@ uniform mat4 vProjection;
 uniform bool useTexture;
 uniform vec4 lightPosition;
 uniform bool useLighting;
+uniform bool useColoring;
 
 varying vec2 fTexCoord;
 varying vec3 N, V, L, H;
+varying vec4 fColor;
 
 void main()
 {
@@ -39,6 +42,9 @@ void main()
 
     if (useTexture)
         fTexCoord = vTexCoord;
+
+    if (useColoring)
+        fColor = vColor;
 }
 </script>
 
@@ -47,12 +53,14 @@ precision mediump float;
 
 varying vec2 fTexCoord;
 varying vec3 N, V, L, H;
+varying vec4 fColor;
 
 uniform sampler2D texture;
 uniform bool useTexture;
 uniform vec4 ambient, diffuse, specular;
 uniform float shininess;
 uniform bool useLighting;
+uniform bool useColoring;
 
 void main()
 {
@@ -69,8 +77,12 @@ void main()
     if (useTexture) {
         color *= texture2D(texture, fTexCoord);
     }
-
     color.a = 1.0;
+
+    if (useColoring) {
+        color *= fColor;
+    }
+
     gl_FragColor = color;
 }
 </script>

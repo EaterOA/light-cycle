@@ -55,6 +55,7 @@ window.onload = function init()
     toggleAttrib("vPosition", true);
     setUniform(gl.uniform1i, "texture", 0);
     setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(geometry.light.position)));
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     // First frame
     requestAnimFrame(render);
@@ -111,7 +112,7 @@ Camera.prototype.update = function()
         }
 
         // Adjust position
-        var anchor = vec4(-1.2, 8.5, 30);
+        var anchor = vec4(0, 8.5, 30);
         var nextPos = world.player.position.slice();
         var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
         nextPos = add(nextPos, offset.slice(0,3));
@@ -441,22 +442,69 @@ function initializeGeometry()
     geo.position = [500, 500, 500];
 
     geo = geometry.arena = {};
-    shape = makeCube(100);
+    geo.shape = makeCube(100);
     geo.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.vertices), gl.STATIC_DRAW);
-    geo.numVertices = shape.vertices.length;
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(geo.shape.vertices), gl.DYNAMIC_DRAW);
+    geo.numVertices = geo.shape.vertices.length;
     geo.texture = gl.createTexture();
     image = document.getElementById("arenaTexture");
     configureTexture(geo.texture, image);
     geo.texCoordBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.texCoords), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(geo.shape.texCoords), gl.DYNAMIC_DRAW);
     geo.generateModel = function(obj) {
         var model = identity();
         model = mult(model, translate(obj.position));
         model = mult(model, scale(obj.size));
         return model;
+    }
+    geo.colorBuffer = gl.createBuffer();
+    geo.transparent = false;
+    geo.update = function(world, obj) {
+        var trans = [];
+        if (camera.position[1] <= 0) trans.push(0);
+        if (camera.position[2] <= 0) trans.push(1);
+        if (camera.position[2] >= world.arena.size[2]) trans.push(2);
+        if (camera.position[0] >= world.arena.size[0]) trans.push(3);
+        if (camera.position[0] <= 0) trans.push(4);
+        if (camera.position[1] >= world.arena.size[1]) trans.push(5);
+        if (trans.length == 0) {
+            if (!this.transparent)
+                return false;
+            this.transparent = false;
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, flatten(this.shape.vertices), gl.DYNAMIC_DRAW);
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, flatten(this.shape.texCoords), gl.DYNAMIC_DRAW);
+            return true;
+        }
+        this.transparent = true;
+        var vertices = [];
+        var texCoords = [];
+        var colors = [];
+        for (var i = 0; i < 6; i++) {
+            if (trans.indexOf(i) == -1)
+                for (var j = 0; j < 6; j++) {
+                    vertices.push(this.shape.vertices[i*6+j]);
+                    texCoords.push(this.shape.texCoords[i*6+j]);
+                    colors.push([1.0, 1.0, 1.0, 1.0]);
+                }
+        }
+        for (var i = 0; i < trans.length; i++) {
+            for (var j = 0; j < 6; j++) {
+                vertices.push(this.shape.vertices[trans[i]*6+j]);
+                texCoords.push(this.shape.texCoords[trans[i]*6+j]);
+                colors.push([1.0, 1.0, 1.0, 0.3]);
+            }
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, flatten(vertices), gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, flatten(texCoords), gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, flatten(colors), gl.DYNAMIC_DRAW);
+        return true;
     }
 
     geo = geometry.bike = {};
@@ -552,9 +600,13 @@ function render(time)
     // prevGeo is a quick and dirty hack to detect state changes, because
     // calling uniforms and rebinding buffers is expensive
     var prevGeo = null;
-    for (var i = 0; i < world.objects.length; i++) {
+    for (var i = world.objects.length-1; i >= 0; i--) {
         var obj = world.objects[i];
         var geo = geometry[obj.type];
+
+        // Perform full update on geometry (hopefully rare)
+        if (geo.update && geo.update(world, obj))
+            prevGeo = null;
 
         // Switch vertex buffer
         if (prevGeo !== geo) {
@@ -610,7 +662,7 @@ function render(time)
             if (typeof(lighting) == "function") {
                 lighting = lighting(obj);
             }
-            if (prevGeo.lighting != lighting) {
+            if (!prevGeo || prevGeo.lighting != lighting) {
                 var ambient = vec4(lighting.ambient);
                 var diffuse = vec4(lighting.diffuse);
                 var specular = vec4(lighting.specular);
@@ -627,7 +679,39 @@ function render(time)
             }
         }
 
+        // Configure color scaling, if defined
+        if (geo.transparent || geo.coloring) {
+            if (prevGeo !== geo) {
+                toggleAttrib("vColor", true);
+                setUniform(gl.uniform1i, "useColoring", true);
+
+                // Switch color buffer
+                gl.bindBuffer(gl.ARRAY_BUFFER, geo.colorBuffer);
+                setAttrib("vColor", 4);
+
+                // Setting color
+                var lighting = geo.lighting;
+                if (typeof(lighting) == "function") {
+                    lighting = lighting(obj);
+                }
+            }
+        }
+        else {
+            if (prevGeo !== geo) {
+                toggleAttrib("vColor", false);
+                setUniform(gl.uniform1i, "useColoring", false);
+            }
+        }
+
+        if (geo.transparent) {
+            gl.enable(gl.BLEND);
+            gl.depthMask(false);
+        }
         gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
+        if (geo.transparent) {
+            gl.disable(gl.BLEND);
+            gl.depthMask(true);
+        }
 
         prevGeo = geo;
     }
