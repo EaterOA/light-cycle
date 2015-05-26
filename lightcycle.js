@@ -233,9 +233,10 @@ function Bike(pos, id)
     this.position = pos.slice();
     this.spd = 100.0;
     this.dir = 0;
+    this.id = id;
+    this.offsets = [1, 0.7];
     this.currentWall = null;
     this.prevWall = null;
-    this.id = id;
     this.pushWall();
 }
 
@@ -266,45 +267,20 @@ Bike.prototype.update = function(world)
         return;
 
     var dist = world.elapsed * this.spd;
-    var pos = this.position;
-    var next = pos.slice();
-    if (this.dir == 0) next[0] += dist;
-    if (this.dir == 1) next[2] += dist;
-    if (this.dir == 2) next[0] -= dist;
-    if (this.dir == 3) next[2] -= dist;
-
 
     // Detection collision with wall
-    for (var i = 0; i < world.objects.length; i++) {
-        var obj = world.objects[i];
-        if (obj.type != "wall")
-            continue;
-        if (obj == this.currentWall || obj == this.prevWall)
-            continue;
-        if ((obj.start[0] > pos[0]) ^ (obj.start[0] > next[0]) &&
-                (pos[2] > obj.start[2]) ^ (pos[2] > obj.end[2])) {
-            this.dead = true;
-            next[0] = obj.start[0];
-            this.removeWalls();
-        }
-        else if ((obj.start[2] > pos[2]) ^ (obj.start[2] > next[2]) &&
-                (pos[0] > obj.start[0]) ^ (pos[0] > obj.end[0])) {
-            this.dead = true;
-            next[2] = obj.start[2];
-            this.removeWalls();
-        }
-    }
-
-    // Detect collision with arena boundary
-    if (next[0] <= 0 || next[0] >= world.arena.size[0] ||
-            next[2] <= 0 || next[2] >= world.arena.size[2]) {
+    var wdist = Bike.nearestWalls(this.position, this.offsets);
+    if (wdist[this.dir] < dist) {
+        dist = wdist[this.dir];
         this.dead = true;
-        next[0] = Math.max(0, Math.min(next[0], world.arena.size[0]))
-        next[2] = Math.max(0, Math.min(next[2], world.arena.size[2]))
         this.removeWalls();
     }
 
-    this.position = next;
+    if (this.dir == 0) this.position[0] += dist;
+    if (this.dir == 1) this.position[2] += dist;
+    if (this.dir == 2) this.position[0] -= dist;
+    if (this.dir == 3) this.position[2] -= dist;
+
     this.currentWall.extendTo(this.position);
 }
 
@@ -317,6 +293,52 @@ Bike.prototype.pushWall = function()
         this.prevWall = this.currentWall;
         this.currentWall = maki;
     }
+}
+
+Bike.nearestWalls = function(pos, offsets)
+{
+    if (typeof(offsets) == "undefined")
+        offsets = [0, 0];
+
+    var x = pos[0];
+    var z = pos[2];
+    var s = offsets[1];
+    var objs = world.objects;
+    var dists = [world.arena.size[0] - x, world.arena.size[2] - z, x, z];
+    for (var i = 0; i < objs.length; i++)
+    {
+        if (objs[i].type == "wall")
+        {
+            var wall = objs[i];
+            if ((wall.start[0]-s <= x && x <= wall.end[0]+s) ||
+                (wall.end[0]-s <= x && x <= wall.start[0]+s))
+            {
+                var t = wall.start[2] - z;
+                var te = wall.end[2] - z;
+                if (Math.abs(te) < Math.abs(t))
+                    t = te;
+                if (t > 0 && t < dists[1])
+                    dists[1] = t;
+                else if (t < 0 && -t < dists[3])
+                    dists[3] = -t;
+            }
+            if ((wall.start[2]-s <= z && z <= wall.end[2]+s) ||
+                (wall.end[2]-s <= z && z <= wall.start[2]+s))
+            {
+                var t = wall.start[0] - x;
+                var te = wall.end[0] - x;
+                if (Math.abs(te) < Math.abs(t))
+                    t = te;
+                if (t > 0 && t < dists[0])
+                    dists[0] = t;
+                else if (t < 0 && -t < dists[2])
+                    dists[2] = -t;
+            }
+        }
+    }
+    for (var i = 0; i < dists.length; i++)
+        dists[i] -= offsets[0];
+    return dists;
 }
 
 PcBike.prototype = Object.create(Bike.prototype);
@@ -350,7 +372,7 @@ CpuBike.prototype.update = function(world)
 {
     var pika = 10;
     var dist = world.elapsed * this.spd;
-    var wdist = CpuBike.nearestWalls(this.position);
+    var wdist = Bike.nearestWalls(this.position, this.offsets);
     var cdist = wdist[this.dir];
     var rcdist = wdist[(this.dir + 1) % 4];
     var lcdist = wdist[(this.dir + 3) % 4];
@@ -362,40 +384,6 @@ CpuBike.prototype.update = function(world)
             this.turn(false);
     }
     Bike.prototype.update.call(this, world);
-}
-
-CpuBike.nearestWalls = function(pos)
-{
-    var x = pos[0];
-    var z = pos[2];
-    var objs = world.objects;
-    var dists = [world.arena.size[0] - x, world.arena.size[2] - z, x, z];
-    for (var i = 0; i < objs.length; i++)
-    {
-        if (objs[i].type == "wall")
-        {
-            var wall = objs[i];
-            if ((wall.start[0] <= x && x <= wall.end[0]) ||
-                (wall.end[0] <= x && x <= wall.start[0]))
-            {
-                var t = wall.start[2] - z;
-                if (t > 0 && t < dists[0])
-                    dists[1] = t;
-                else if (t < 0 && -t < dists[2])
-                    dists[3] = -t;
-            }
-            else if ((wall.start[2] <= z && z <= wall.end[2]) ||
-                (wall.end[2] <= z && z <= wall.start[2]))
-            {
-                var t = wall.start[0] - x;
-                if (t > 0 && t < dists[2])
-                    dists[0] = t;
-                else if (t < 0 && -t < dists[3])
-                    dists[2] = -t;
-            }
-        }
-    }
-    return dists;
 }
 
 CpuBike.distanceFromWall = function(pos, dir)
@@ -855,7 +843,7 @@ Controller.prototype.keydown = function(e)
     this.pressing[e.keyCode] = true;
 
     if (e.keyCode == 80) { // p (for debug purposes)
-        console.log(world.bikes[1].dir, flatten(CpuBike.nearestWalls(cameraPosition)));
+        console.log(world.bikes[1].dir, flatten(Bike.nearestWalls(cameraPosition)));
     }
 }
 
