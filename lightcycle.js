@@ -47,6 +47,10 @@ window.onload = function init()
     world.player = world.bikes[0];
     world.addBike(CpuBike);
     world.addBike(CpuBike);
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
 
     // Create the geometry used in World objects
     initializeGeometry();
@@ -589,16 +593,36 @@ function initializeGeometry()
             shininess: 4.0,
         }
         if (obj.id == 0) {
-            res.ambient = [0.3, 0.5, 0.8];
-            res.diffuse = [0.2, 0.29, 0.55];
+            res.ambient = [0.15, 0.4, 0.7];
+            res.diffuse = [0.2, 0.2, 0.45];
         }
         else if (obj.id == 1) {
-            res.ambient = [0.7, 0.3, 0.4];
-            res.diffuse = [0.6, 0.21, 0.15];
+            res.ambient = [0.8, 0.2, 0.3];
+            res.diffuse = [0.6, 0.31, 0.25];
         }
         else if (obj.id == 2) {
-            res.ambient = [0.2, 0.8, 0.4];
-            res.diffuse = [0.3, 0.6, 0.25];
+            res.ambient = [0.0, 0.7, 0.2];
+            res.diffuse = [0.1, 0.4, 0.25];
+        }
+        else if (obj.id == 3) {
+            res.ambient = [0.6, 0.4, 0.2];
+            res.diffuse = [0.6, 0.5, 0.3];
+        }
+        else if (obj.id == 4) {
+            res.ambient = [0.6, 0.5, 1.0];
+            res.diffuse = [0.3, 0.3, 0.7];
+        }
+        else if (obj.id == 5) {
+            res.ambient = [1.0, 0.4, 0.0];
+            res.diffuse = [0.3, 0.2, 0.1];
+        }
+        else if (obj.id == 6) {
+            res.ambient = [0.05, 0.5, 0.4];
+            res.diffuse = [0.2, 0.3, 0.2];
+        }
+        else if (obj.id == 7) {
+            res.ambient = [0.4, 0.5, 0.45];
+            res.diffuse = [0.2, 0.22, 0.2];
         }
         return res;
     }
