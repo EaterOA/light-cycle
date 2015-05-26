@@ -203,6 +203,15 @@ World.prototype.update = function(time)
         if (obj.update)
             obj.update(this);
     }
+
+    var newList = [];
+    for (var i = 0; i < this.objects.length; i++) {
+        var obj = this.objects[i];
+        if (obj.type == "wall" && obj.dead) {}
+        else
+            newList.push(obj);
+    }
+    this.objects = newList;
 }
 
 World.prototype.addBike = function(type)
@@ -246,8 +255,7 @@ Bike.prototype.removeWalls = function()
     {
         if(objs[i].id == this.id && objs[i].type == "wall")
         {
-            objs.splice(i, 1);
-            i--;
+            objs[i].dying = true;
         }
     }
 }
@@ -414,6 +422,8 @@ function Wall(start, end, dir, id)
     this.end = end.slice();
     this.dir = dir;
     this.id = id;
+    this.dying = false;
+    this.life = 1.0;
 }
 
 Wall.prototype.extend = function(amt)
@@ -432,6 +442,15 @@ Wall.prototype.extendTo = function(pos)
 {
     this.end[0] = pos[0];
     this.end[2] = pos[2];
+}
+
+Wall.prototype.update = function(world)
+{
+    if (this.dying) {
+        this.life -= 2 * world.elapsed;
+        if (this.life <= 0)
+            this.dead = true;
+    }
 }
 
 function initializeGeometry()
@@ -624,7 +643,7 @@ function initializeGeometry()
     }
     geo.generateModel = function(obj) {
         var v = subtract(obj.end, obj.start);
-        var size = [0.2, 2, length(v)];
+        var size = [0.2, 2 * obj.life, length(v)];
         var angle = angleBetweenY([0, 0, 1], v);
         var model = identity();
         model = mult(model, translate(obj.start));
@@ -675,6 +694,10 @@ function render(time)
     for (var i = world.objects.length-1; i >= 0; i--) {
         var obj = world.objects[i];
         var geo = geometry[obj.type];
+
+        // Don't draw dead objects
+        if (obj.dead)
+            continue;
 
         // Perform full update on geometry (hopefully rare)
         if (geo.update && geo.update(world, obj))
