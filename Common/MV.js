@@ -612,31 +612,19 @@ function mix( u, v, s )
 
 function flatten( v )
 {
+    if (!Array.isArray(v[0]))
+        return new Float32Array(v);
+
     if ( v.matrix === true ) {
         v = transpose( v );
     }
 
-    var n = v.length;
-    var elemsAreArrays = false;
+    var floats = new Float32Array( v.length * v[0].length );
 
-    if ( Array.isArray(v[0]) ) {
-        elemsAreArrays = true;
-        n *= v[0].length;
-    }
-
-    var floats = new Float32Array( n );
-
-    if ( elemsAreArrays ) {
-        var idx = 0;
-        for ( var i = 0; i < v.length; ++i ) {
-            for ( var j = 0; j < v[i].length; ++j ) {
-                floats[idx++] = v[i][j];
-            }
-        }
-    }
-    else {
-        for ( var i = 0; i < v.length; ++i ) {
-            floats[i] = v[i];
+    var idx = 0;
+    for ( var i = 0; i < v.length; ++i ) {
+        for ( var j = 0; j < v[i].length; ++j ) {
+            floats[idx++] = v[i][j];
         }
     }
 

@@ -51,24 +51,14 @@ window.onload = function init()
     // Create the geometry used in World objects
     initializeGeometry();
 
-    // Configure texture filter
-    var ext = (
-        gl.getExtension('EXT_texture_filter_anisotropic') ||
-        gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
-        gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
-    );
-    if (ext) {
-        var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
-        gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
-    }
-
     // Other set up
     toggleAttrib("vPosition", true);
     setUniform(gl.uniform1i, "texture", 0);
     setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(geometry.light.position)));
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    world.time = window.performance.now() / 1000;
 
-    // First frame
+    // Start game
     requestAnimFrame(render);
 }
 
@@ -446,7 +436,17 @@ Wall.prototype.extendTo = function(pos)
 
 function initializeGeometry()
 {
-    var geo, shape, image;
+    function convert(v) {
+        var converted = [];
+        for (var i = 0; i < v.length; i++) {
+            converted.push(v[i]);
+            if (i % 3 == 2)
+                converted.push(1.0);
+        }
+        return converted;
+    }
+
+    var geo, shape, image, xmlhttp;
 
     geometry = {};
 
@@ -518,6 +518,7 @@ function initializeGeometry()
         return true;
     }
 
+    /* cube bike code
     geo = geometry.bike = {};
     shape = makeCube();
     geo.vertexBuffer = gl.createBuffer();
@@ -554,6 +555,56 @@ function initializeGeometry()
         model = mult(model, translate([-0.5, 0, -0.5]));
         return model;
     }
+    */
+    geo = geometry.bike = {};
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.overrideMimeType("text/plain; charset=ascii");
+    xmlhttp.open("GET", "bike.obj", false);
+    xmlhttp.send();
+    var m = new OBJ.Mesh(xmlhttp.responseText);
+    m.vertices = convert(m.vertices);
+    m.normals = convert(m.vertexNormals);
+    geo.indexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(m.indices), gl.STATIC_DRAW)
+    geo.vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(m.vertices), gl.STATIC_DRAW);
+    geo.numVertices = m.vertices.length / 4;
+    geo.normalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(m.normals), gl.STATIC_DRAW);
+    geo.lighting = function(obj) {
+        var res = {
+            ambient: [0.0, 0.0, 0.0],
+            diffuse: [0.0, 0.0, 0.0],
+            specular: [0.3, 0.3, 0.3],
+            shininess: 4.0,
+        }
+        if (obj.id == 0) {
+            res.ambient = [0.3, 0.5, 0.8];
+            res.diffuse = [0.2, 0.29, 0.55];
+        }
+        else if (obj.id == 1) {
+            res.ambient = [0.7, 0.3, 0.4];
+            res.diffuse = [0.6, 0.21, 0.15];
+        }
+        else if (obj.id == 2) {
+            res.ambient = [0.2, 0.8, 0.4];
+            res.diffuse = [0.3, 0.6, 0.25];
+        }
+        return res;
+    }
+    geo.baseModel = mult(scale(1.4, 1.4, 1.4),
+                    mult(translate(1, -0.1, 0),
+                         rotate(-90, [1, 0, 0])));
+    geo.generateModel = function(obj) {
+        var model = identity();
+        model = mult(model, translate(obj.position));
+        model = mult(model, rotate(360 - obj.dir * 90, [0, 1, 0]));
+        model = mult(model, this.baseModel);
+        return model;
+    }
 
     geo = geometry.wall = {};
     shape = makeCube();
@@ -568,6 +619,7 @@ function initializeGeometry()
         var res = geometry.bike.lighting(obj);
         stretch(1.1, res.ambient);
         stretch(1.1, res.diffuse);
+        res.specular = [0,0,0,0];
         return res;
     }
     geo.generateModel = function(obj) {
@@ -592,6 +644,15 @@ function configureTexture(texture, image)
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    var ext = (
+        gl.getExtension('EXT_texture_filter_anisotropic') ||
+        gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+        gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+    );
+    if (ext) {
+        var max = gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+        gl.texParameterf(gl.TEXTURE_2D, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
+    }
 }
 
 function render(time)
@@ -707,7 +768,13 @@ function render(time)
             gl.enable(gl.BLEND);
             gl.depthMask(false);
         }
-        gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
+        if (geo.indexBuffer) {
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, geo.indexBuffer);
+            gl.drawElements(gl.TRIANGLES, geo.numVertices, gl.UNSIGNED_SHORT, 0);
+        }
+        else {
+            gl.drawArrays(gl.TRIANGLES, 0, geo.numVertices);
+        }
         if (geo.transparent) {
             gl.disable(gl.BLEND);
             gl.depthMask(true);
