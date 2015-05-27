@@ -87,9 +87,9 @@ Camera.prototype.update = function()
 
         // Attached rotation
         if (controller.pressing[37]) // left
-            this.rotation[1] += 180 * world.elapsed;
+            this.rotation[1] += 210 * world.elapsed;
         if (controller.pressing[39]) // right
-            this.rotation[1] -= 180 * world.elapsed;
+            this.rotation[1] -= 210 * world.elapsed;
 
         // State adjustments based on player actions
         var bikeTurned = this.bikePrevDir != world.player.dir;
@@ -566,41 +566,41 @@ function initializeGeometry()
             shininess: 4.0,
         }
         if (obj.id == 0) {
-            res.ambient = [0.15, 0.4, 0.7];
-            res.diffuse = [0.2, 0.2, 0.45];
+            res.ambient = [0.11, 0.3, 0.5];
+            res.diffuse = [0.1, 0.1, 0.25];
         }
         else if (obj.id == 1) {
-            res.ambient = [0.8, 0.2, 0.3];
-            res.diffuse = [0.6, 0.31, 0.25];
+            res.ambient = [0.6, 0.15, 0.23];
+            res.diffuse = [0.3, 0.16, 0.13];
         }
         else if (obj.id == 2) {
-            res.ambient = [0.0, 0.7, 0.2];
-            res.diffuse = [0.1, 0.4, 0.25];
+            res.ambient = [0.0, 0.5, 0.15];
+            res.diffuse = [0.05, 0.2, 0.13];
         }
         else if (obj.id == 3) {
-            res.ambient = [0.6, 0.4, 0.2];
-            res.diffuse = [0.6, 0.5, 0.3];
+            res.ambient = [0.3, 0.2, 0.12];
+            res.diffuse = [0.1, 0.1, 0.15];
         }
         else if (obj.id == 4) {
-            res.ambient = [0.6, 0.5, 1.0];
-            res.diffuse = [0.3, 0.3, 0.7];
+            res.ambient = [0.37, 0.15, 0.6];
+            res.diffuse = [0.15, 0.1, 0.25];
         }
         else if (obj.id == 5) {
-            res.ambient = [1.0, 0.4, 0.0];
-            res.diffuse = [0.3, 0.2, 0.1];
+            res.ambient = [0.75, 0.3, 0.0];
+            res.diffuse = [0.15, 0.1, 0.05];
         }
         else if (obj.id == 6) {
-            res.ambient = [0.05, 0.5, 0.4];
-            res.diffuse = [0.2, 0.3, 0.2];
+            res.ambient = [0.05, 0.37, 0.3];
+            res.diffuse = [0.1, 0.2, 0.1];
         }
         else if (obj.id == 7) {
-            res.ambient = [0.4, 0.5, 0.45];
-            res.diffuse = [0.2, 0.22, 0.2];
+            res.ambient = [0.3, 0.4, 0.37];
+            res.diffuse = [0.1, 0.13, 0.1];
         }
         return res;
     }
-    geo.baseModel = mult(scale(1.4, 1.4, 1.4),
-                    mult(translate(1, -0.1, 0),
+    geo.baseModel = mult(scale(1.4, 1.47, 1.4),
+                    mult(translate(0.8, -0.1, 0),
                          rotate(-90, [1, 0, 0])));
     geo.generateModel = function(obj) {
         var model = identity();
@@ -621,14 +621,13 @@ function initializeGeometry()
     geo.numVertices = shape.vertices.length;
     geo.lighting = function (obj) {
         var res = geometry.bike.lighting(obj);
-        stretch(1.1, res.ambient);
-        stretch(1.1, res.diffuse);
+        stretch(2.2, res.ambient);
         res.specular = [0,0,0,0];
         return res;
     }
     geo.generateModel = function(obj) {
         var v = subtract(obj.end, obj.start);
-        var size = [0.2, 2 * obj.life, length(v)];
+        var size = [0.1, 1.5 * obj.life, length(v)];
         var angle = angleBetweenY([0, 0, 1], v);
         var model = identity();
         model = mult(model, translate(obj.start));
@@ -687,6 +686,11 @@ function render(time)
         // Perform full update on geometry (hopefully rare)
         if (geo.update && geo.update(world, obj))
             prevGeo = null;
+
+        // Special sauce for wall
+        if (prevGeo !== geo) {
+            setUniform(gl.uniform1i, "isWall", obj.type == "wall");
+        }
 
         // Switch vertex buffer
         if (prevGeo !== geo) {
