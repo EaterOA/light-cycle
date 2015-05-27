@@ -72,18 +72,22 @@ function Camera(aspect)
     this.fovx = 60;
     this.position = [1, 10, 20];
     this.rotation = [-10, 0];
-    this.free = false;
+    this.mode = 1;
 
     addEventListener("keydown", function(e) {
-        if (e.keyCode == 70) // f
-            this.free = !this.free;
+        if (e.keyCode == 48) // 0
+            this.mode = 0;
+        else if (e.keyCode == 49) // 1
+            this.mode = 1
+        else if (e.keyCode == 50) // 2
+            this.mode = 2;
     }.bind(this));
 }
 
 Camera.prototype.update = function()
 {
-    // Update according to player perspective
-    if (world.player && !this.free) {
+    // Player perspective mode
+    if (this.mode == 1 && world.player) {
 
         // Attached rotation
         if (controller.pressing[37]) // left
@@ -125,7 +129,38 @@ Camera.prototype.update = function()
         this.position = nextPos;
     }
 
-    // Update according to free camera
+    // First-person perspective mode
+    else if (this.mode == 2 && world.player) {
+
+        // Attached rotation
+        if (controller.pressing[37]) // left
+            this.rotation[1] += 300 * world.elapsed;
+        if (controller.pressing[39]) // right
+            this.rotation[1] -= 300 * world.elapsed;
+
+        // Adjust direction
+        var rotating = controller.pressing[37] || controller.pressing[39];
+        var snapMult = rotating ? 1.4 : 1.7;
+        var curAngle = this.rotation[1];
+        var trueAngle = 270 - world.player.dir * 90;
+        var diff = angleDiff(curAngle, trueAngle);
+        var sign = (diff >= 0 ? 1.0 : -1.0);
+        var rotateSpd = sign * (Math.pow(Math.abs(diff), snapMult) + 20);
+        var rotateAmt = rotateSpd * world.elapsed;
+        if (Math.abs(rotateAmt) > Math.abs(diff))
+            rotateAmt = diff;
+        curAngle += rotateAmt;
+        this.rotation[1] = normalizeAngle(curAngle);
+
+        // Adjust position
+        var anchor = vec4(0, 2.5, -2.3);
+        var nextPos = world.player.position.slice();
+        var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
+        nextPos = add(nextPos, offset.slice(0,3));
+        this.position = nextPos;
+    }
+
+    // Free camera mode
     else {
         if (controller.pressing[37]) // left
             this.rotation[1] += 120 * world.elapsed;
