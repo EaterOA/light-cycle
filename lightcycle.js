@@ -530,6 +530,7 @@ function initializeGeometry()
     }
     geo.colorBuffer = gl.createBuffer();
     geo.transparent = false;
+    geo.colorScale = false;
     geo.update = function(world, obj) {
         var trans = [];
         if (camera.position[1] <= 0) trans.push(0);
@@ -544,11 +545,13 @@ function initializeGeometry()
             if (!this.transparent)
                 return false;
             this.transparent = false;
+            this.coloring = false;
             vertices = this.shape.vertices;
             texCoords = this.shape.texCoords;
         }
         else {
             this.transparent = true;
+            this.coloring = true;
             var colors = [];
             for (var i = 0; i < 6; i++) {
                 if (trans.indexOf(i) == -1)
@@ -788,7 +791,7 @@ function render(time)
         }
 
         // Configure color scaling, if defined
-        if (geo.transparent || geo.coloring) {
+        if (geo.coloring) {
             if (prevGeo !== geo) {
                 toggleAttrib("vColor", true);
                 setUniform(gl.uniform1i, "useColoring", true);
