@@ -224,19 +224,30 @@ World.prototype.addBike = function(type)
         console.log("addBike: reached bike limit");
         return;
     }
+
     var range = this.arena.size;
-    var pos = [rand(0, range[0]), 0, rand(0, range[2])];
-    var bike = new type(pos, this.bikes.length);
+    var safe = 200;
+    var pos, dir;
+    while (true) {
+        pos = [rand(0, range[0]), 0, rand(0, range[2])];
+        var wdist = Bike.nearestWalls(pos);
+        for (dir = 0; dir < 4; dir++)
+            if (wdist[dir] >= safe)
+                break;
+        if (dir < 4)
+            break;
+    }
+    var bike = new type(this.bikes.length, pos, dir);
     this.bikes.push(bike);
     this.objects.push(bike);
 }
 
-function Bike(pos, id)
+function Bike(id, pos, dir)
 {
     this.type = "bike";
     this.position = pos.slice();
     this.spd = 100.0;
-    this.dir = 0;
+    this.dir = dir;
     this.id = id;
     this.offsets = [1, 0.7];
     this.currentWall = null;
@@ -347,9 +358,9 @@ Bike.nearestWalls = function(pos, offsets)
 
 PcBike.prototype = Object.create(Bike.prototype);
 PcBike.prototype.constructor = PcBike;
-function PcBike(pos, id)
+function PcBike(id, pos, dir)
 {
-    Bike.call(this, pos, id);
+    Bike.call(this, id, pos, dir);
 
     addEventListener("keydown", function(e) {
         if (e.keyCode == 87) { // w
@@ -367,9 +378,9 @@ function PcBike(pos, id)
 
 CpuBike.prototype = Object.create(Bike.prototype);
 CpuBike.prototype.constructor = CpuBike;
-function CpuBike(pos, id)
+function CpuBike(id, pos, dir)
 {
-    Bike.call(this, pos, id);
+    Bike.call(this, id, pos, dir);
 }
 
 CpuBike.prototype.update = function(world)
@@ -529,44 +540,6 @@ function initializeGeometry()
         return true;
     }
 
-    /* cube bike code
-    geo = geometry.bike = {};
-    shape = makeCube();
-    geo.vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.vertices), gl.STATIC_DRAW);
-    geo.normalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.normals), gl.STATIC_DRAW);
-    geo.numVertices = shape.vertices.length;
-    geo.lighting = function(obj) {
-        var res = {
-            ambient: [0.0, 0.0, 0.0],
-            diffuse: [0.0, 0.0, 0.0],
-            specular: [0.0, 0.0, 0.0],
-            shininess: 1.0,
-        }
-        if (obj.id == 0) {
-            res.ambient = [0.3, 0.5, 0.8];
-            res.diffuse = [0.2, 0.29, 0.55];
-        }
-        else if (obj.id == 1) {
-            res.ambient = [0.7, 0.3, 0.4];
-            res.diffuse = [0.6, 0.21, 0.15];
-        }
-        else if (obj.id == 2) {
-            res.ambient = [0.2, 0.8, 0.4];
-            res.diffuse = [0.3, 0.6, 0.25];
-        }
-        return res;
-    }
-    geo.generateModel = function(obj) {
-        var model = identity();
-        model = mult(model, translate(obj.position));
-        model = mult(model, translate([-0.5, 0, -0.5]));
-        return model;
-    }
-    */
     geo = geometry.bike = {};
     xmlhttp = new XMLHttpRequest();
     xmlhttp.overrideMimeType("text/plain; charset=ascii");
