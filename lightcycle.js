@@ -75,12 +75,23 @@ function Camera(aspect)
     this.mode = 1;
 
     addEventListener("keydown", function(e) {
+        var nextMode = -1;
+
         if (e.keyCode == 48) // 0
-            this.mode = 0;
+            nextMode = 0;
         else if (e.keyCode == 49) // 1
-            this.mode = 1
+            nextMode = 1
         else if (e.keyCode == 50) // 2
-            this.mode = 2;
+            nextMode = 2;
+
+        if (nextMode == -1)
+            return;
+        if (nextMode == this.mode) {
+            this.mode = 1;
+        }
+        else {
+            this.mode = nextMode;
+        }
     }.bind(this));
 }
 
