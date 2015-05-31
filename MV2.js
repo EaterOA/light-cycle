@@ -149,6 +149,13 @@ function stretch(s, v)
         v[i] = s * v[i];
 }
 
+function stretched(s, v)
+{
+    var res = v.slice();
+    stretch(s, res);
+    return res;
+}
+
 // Finds the angle between two vectors on the XZ plane
 // Rotating v by this angle with the Y axis should yield u
 function angleBetweenY(v, u)
