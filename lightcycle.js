@@ -66,7 +66,6 @@ function Camera(aspect)
     this.fovx = 60;
     this.position = [1, 10, 20];
     this.rotation = [-10, 0, 0];
-    this.trueRotation;
     this.baseModel;
     this.mode = 1;
 
@@ -146,55 +145,7 @@ Camera.prototype.update = function()
         nextPos = add(nextPos, offset.slice(0,3));
         this.position = nextPos;
 
-        var w = world.arena.size;
-        var obj = p;
-        var model = identity();
-        model = mult(model, translate(w[0] / 2, 0, w[2] / 2));
-        if (obj.face == 1) {
-            model = mult(model, translate(w[0] / 2, w[1] / 2, 0));
-            model = mult(model, rotate(90, [0, 0, 1]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        else if (obj.face == 2) {
-            model = mult(model, translate(0, w[1] / 2, w[2] / 2));
-            model = mult(model, rotate(-90, [1, 0, 0]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        else if (obj.face == 3) {
-            model = mult(model, translate(0, w[1], 0));
-            model = mult(model, rotate(180, [0, 0, 1]));
-        }
-        else if (obj.face == 4) {
-            model = mult(model, translate(-w[0] / 2, w[1] / 2, 0));
-            model = mult(model, rotate(-90, [0, 0, 1]));
-            model = mult(model, rotate(90, [0, 1, 0]));
-        }
-        else if (obj.face == 5) {
-            model = mult(model, translate(0, w[1] / 2, -w[2] / 2));
-            model = mult(model, rotate(90, [1, 0, 0]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        model = mult(model, translate(-w[0] / 2, 0, -w[2] / 2));
-        this.position = transform(model, vec4(this.position)).slice(0,3);
-
-        if (obj.face == 0) {
-            this.baseModel = identity();
-        }
-        else if (obj.face == 1) {
-            this.baseModel = mult(rotate(-90, [0,0,1]), rotate(90, [-1,0,0]));
-        }
-        else if (obj.face == 2) {
-            this.baseModel = mult(rotate(90, [1,0,0]), rotate(90, [0,0,-1]));
-        }
-        else if (obj.face == 3) {
-            this.baseModel = rotate(180, [0,0,1]);
-        }
-        else if (obj.face == 4) {
-            this.baseModel = mult(rotate(90, [0,0,1]), rotate(-90, [1,0,0]));
-        }
-        else if (obj.face == 5) {
-            this.baseModel = mult(rotate(-90, [1,0,0]), rotate(90, [0,0,1]));
-        }
+        this.baseModel = geometry.cubeUnrotate[p.face];
     }
 
     // First-person perspective mode
@@ -270,8 +221,8 @@ Camera.prototype.view = function()
     var view = identity();
     view = mult(view, rotate(-this.rotation[0], [1, 0, 0]));
     view = mult(view, rotate(-this.rotation[1], [0, 1, 0]));
-    view = mult(view, this.baseModel);
     view = mult(view, translate(negate(this.position)));
+    view = mult(view, this.baseModel);
     return view;
 }
 
@@ -638,6 +589,36 @@ function initializeGeometry()
 
     geometry = {};
 
+    geo = geometry.cubeRotate = [];
+    var r = [identity(),
+             mult(rotate(-90, [-1,0,0]), rotate(90, [0,0,1])),
+             mult(rotate(-90, [0,0,-1]), rotate(-90, [1,0,0])),
+             rotate(180, [0,0,1]),
+             mult(rotate(90, [1,0,0]), rotate(-90, [0,0,1])),
+             mult(rotate(-90, [0,0,1]), rotate(90, [1,0,0]))]
+    for (var i = 0; i < r.length; i++) {
+        var m = identity();
+        m = mult(m, translate(stretched(0.5, world.arena.size)));
+        m = mult(m, r[i]);
+        m = mult(m, translate(stretched(-0.5, world.arena.size)));
+        geo.push(m);
+    }
+
+    geo = geometry.cubeUnrotate = [];
+    var r = [identity(),
+             mult(rotate(-90, [0,0,1]), rotate(90, [-1,0,0])),
+             mult(rotate(90, [1,0,0]), rotate(90, [0,0,-1])),
+             rotate(180, [0,0,1]),
+             mult(rotate(90, [0,0,1]), rotate(-90, [1,0,0])),
+             mult(rotate(-90, [1,0,0]), rotate(90, [0,0,1]))]
+    for (var i = 0; i < r.length; i++) {
+        var m = identity();
+        m = mult(m, translate(stretched(0.5, world.arena.size)));
+        m = mult(m, r[i]);
+        m = mult(m, translate(stretched(-0.5, world.arena.size)));
+        geo.push(m);
+    }
+
     geo = geometry.light = {};
     geo.position = [500, 500, 500];
 
@@ -664,12 +645,13 @@ function initializeGeometry()
     geo.colorScale = false;
     geo.update = function(world, obj) {
         var trans = [];
-        if (camera.position[1] <= 0) trans.push(0);
-        if (camera.position[2] <= 0) trans.push(1);
-        if (camera.position[2] >= world.arena.size[2]) trans.push(2);
-        if (camera.position[0] >= world.arena.size[0]) trans.push(3);
-        if (camera.position[0] <= 0) trans.push(4);
-        if (camera.position[1] >= world.arena.size[1]) trans.push(5);
+        var cpos = transform(geometry.cubeRotate[world.player.face], vec4(camera.position)).slice(0, 3);
+        if (cpos[1] <= 0) trans.push(0);
+        if (cpos[2] <= 0) trans.push(1);
+        if (cpos[2] >= world.arena.size[2]) trans.push(2);
+        if (cpos[0] >= world.arena.size[0]) trans.push(3);
+        if (cpos[0] <= 0) trans.push(4);
+        if (cpos[1] >= world.arena.size[1]) trans.push(5);
         var vertices = [];
         var texCoords = [];
         if (trans.length == 0) {
@@ -773,32 +755,7 @@ function initializeGeometry()
                          rotate(-90, [1, 0, 0])));
     geo.generateModel = function(obj) {
         var model = identity();
-        model = mult(model, translate(w[0] / 2, 0, w[2] / 2));
-        if (obj.face == 1) {
-            model = mult(model, translate(w[0] / 2, w[1] / 2, 0));
-            model = mult(model, rotate(90, [0, 0, 1]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        else if (obj.face == 2) {
-            model = mult(model, translate(0, w[1] / 2, w[2] / 2));
-            model = mult(model, rotate(-90, [1, 0, 0]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        else if (obj.face == 3) {
-            model = mult(model, translate(0, w[1], 0));
-            model = mult(model, rotate(180, [0, 0, 1]));
-        }
-        else if (obj.face == 4) {
-            model = mult(model, translate(-w[0] / 2, w[1] / 2, 0));
-            model = mult(model, rotate(-90, [0, 0, 1]));
-            model = mult(model, rotate(90, [0, 1, 0]));
-        }
-        else if (obj.face == 5) {
-            model = mult(model, translate(0, w[1] / 2, -w[2] / 2));
-            model = mult(model, rotate(90, [1, 0, 0]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        model = mult(model, translate(-world.arena.size[0] / 2, 0, -world.arena.size[2] / 2));
+        model = mult(model, geometry.cubeRotate[obj.face]);
         model = mult(model, translate(obj.position));
         model = mult(model, rotate(360 - obj.dir * 90, [0, 1, 0]));
         model = mult(model, this.baseModel);
@@ -826,32 +783,7 @@ function initializeGeometry()
         var size = [0.1, 1.5 * obj.life, length(v)];
         var angle = angleBetweenY([0, 0, 1], v);
         var model = identity();
-        model = mult(model, translate(w[0] / 2, 0, w[2] / 2));
-        if (obj.face == 1) {
-            model = mult(model, translate(w[0] / 2, w[1] / 2, 0));
-            model = mult(model, rotate(90, [0, 0, 1]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        else if (obj.face == 2) {
-            model = mult(model, translate(0, w[1] / 2, w[2] / 2));
-            model = mult(model, rotate(-90, [1, 0, 0]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        else if (obj.face == 3) {
-            model = mult(model, translate(0, w[1], 0));
-            model = mult(model, rotate(180, [0, 0, 1]));
-        }
-        else if (obj.face == 4) {
-            model = mult(model, translate(-w[0] / 2, w[1] / 2, 0));
-            model = mult(model, rotate(-90, [0, 0, 1]));
-            model = mult(model, rotate(90, [0, 1, 0]));
-        }
-        else if (obj.face == 5) {
-            model = mult(model, translate(0, w[1] / 2, -w[2] / 2));
-            model = mult(model, rotate(90, [1, 0, 0]));
-            model = mult(model, rotate(-90, [0, 1, 0]));
-        }
-        model = mult(model, translate(-world.arena.size[0] / 2, 0, -world.arena.size[2] / 2));
+        model = mult(model, geometry.cubeRotate[obj.face])
         model = mult(model, translate(obj.start));
         model = mult(model, rotate(angle, [0, 1, 0]));
         model = mult(model, translate(-size[0] / 2, 0, -size[0] / 2));
