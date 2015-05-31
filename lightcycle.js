@@ -45,12 +45,6 @@ window.onload = function init()
     world = new World();
     world.addBike(PcBike);
     world.player = world.bikes[0];
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
 
     // Create the geometry used in World objects
     initializeGeometry();
@@ -71,7 +65,9 @@ function Camera(aspect)
     this.aspect = aspect;
     this.fovx = 60;
     this.position = [1, 10, 20];
-    this.rotation = [-10, 0];
+    this.rotation = [-10, 0, 0];
+    this.trueRotation;
+    this.baseModel;
     this.mode = 1;
 
     addEventListener("keydown", function(e) {
@@ -97,8 +93,18 @@ function Camera(aspect)
 
 Camera.prototype.update = function()
 {
+    var p = world.player;
+
     // Player perspective mode
-    if (this.mode == 1 && world.player) {
+    if (this.mode == 1 && p) {
+
+        if (typeof(this.bikePrevFace) != "undefined" && this.bikePrevFace != p.face) {
+            var prevTrueAngle = 270 - this.bikePrevDir * 90;
+            var offset = angleDiff(prevTrueAngle, this.rotation[1]);
+            var trueAngle = 270 - p.dir * 90;
+            this.rotation[1] = normalizeAngle(trueAngle + offset);
+        }
+        this.bikePrevFace = p.face;
 
         // Attached rotation
         if (controller.pressing[37]) // left
@@ -107,19 +113,20 @@ Camera.prototype.update = function()
             this.rotation[1] -= 210 * world.elapsed;
 
         // State adjustments based on player actions
-        var bikeTurned = this.bikePrevDir != world.player.dir;
+        var bikeTurned = this.bikePrevDir != p.dir && this.bikePrevDir == p.face;
         if (bikeTurned)
             this.fullOffset = true;
-        this.bikePrevDir = world.player.dir;
+        this.bikePrevDir = p.dir;
         var rotating = controller.pressing[37] || controller.pressing[39];
         if (rotating)
             this.fullOffset = false;
 
         // Adjust direction
+        this.rotation[0] = -10;
         var maxOffset = this.fullOffset ? 12 : 35;
         var snapMult = rotating ? 1.2 : 1.5;
         var curAngle = this.rotation[1];
-        var trueAngle = 270 - world.player.dir * 90;
+        var trueAngle = 270 - p.dir * 90;
         var angleOffset = angleDiff(trueAngle, curAngle);
         if (-maxOffset > angleOffset || angleOffset > maxOffset) {
             var diff = angleDiff(curAngle, trueAngle + maxOffset)
@@ -134,14 +141,64 @@ Camera.prototype.update = function()
 
         // Adjust position
         var anchor = vec4(0, 8.5, 30);
-        var nextPos = world.player.position.slice();
+        var nextPos = p.position.slice();
         var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
         nextPos = add(nextPos, offset.slice(0,3));
         this.position = nextPos;
+
+        var w = world.arena.size;
+        var obj = p;
+        var model = identity();
+        model = mult(model, translate(w[0] / 2, 0, w[2] / 2));
+        if (obj.face == 1) {
+            model = mult(model, translate(w[0] / 2, w[1] / 2, 0));
+            model = mult(model, rotate(90, [0, 0, 1]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        else if (obj.face == 2) {
+            model = mult(model, translate(0, w[1] / 2, w[2] / 2));
+            model = mult(model, rotate(-90, [1, 0, 0]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        else if (obj.face == 3) {
+            model = mult(model, translate(0, w[1], 0));
+            model = mult(model, rotate(180, [0, 0, 1]));
+        }
+        else if (obj.face == 4) {
+            model = mult(model, translate(-w[0] / 2, w[1] / 2, 0));
+            model = mult(model, rotate(-90, [0, 0, 1]));
+            model = mult(model, rotate(90, [0, 1, 0]));
+        }
+        else if (obj.face == 5) {
+            model = mult(model, translate(0, w[1] / 2, -w[2] / 2));
+            model = mult(model, rotate(90, [1, 0, 0]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        model = mult(model, translate(-w[0] / 2, 0, -w[2] / 2));
+        this.position = transform(model, vec4(this.position)).slice(0,3);
+
+        if (obj.face == 0) {
+            this.baseModel = identity();
+        }
+        else if (obj.face == 1) {
+            this.baseModel = mult(rotate(-90, [0,0,1]), rotate(90, [-1,0,0]));
+        }
+        else if (obj.face == 2) {
+            this.baseModel = mult(rotate(90, [1,0,0]), rotate(90, [0,0,-1]));
+        }
+        else if (obj.face == 3) {
+            this.baseModel = rotate(180, [0,0,1]);
+        }
+        else if (obj.face == 4) {
+            this.baseModel = mult(rotate(90, [0,0,1]), rotate(-90, [1,0,0]));
+        }
+        else if (obj.face == 5) {
+            this.baseModel = mult(rotate(-90, [1,0,0]), rotate(90, [0,0,1]));
+        }
     }
 
     // First-person perspective mode
-    else if (this.mode == 2 && world.player) {
+    else if (this.mode == 2 && p) {
 
         // Attached rotation
         if (controller.pressing[37]) // left
@@ -153,7 +210,7 @@ Camera.prototype.update = function()
         var rotating = controller.pressing[37] || controller.pressing[39];
         var snapMult = rotating ? 1.4 : 1.7;
         var curAngle = this.rotation[1];
-        var trueAngle = 270 - world.player.dir * 90;
+        var trueAngle = 270 - p.dir * 90;
         var diff = angleDiff(curAngle, trueAngle);
         var sign = (diff >= 0 ? 1.0 : -1.0);
         var rotateSpd = sign * (Math.pow(Math.abs(diff), snapMult) + 20);
@@ -165,7 +222,7 @@ Camera.prototype.update = function()
 
         // Adjust position
         var anchor = vec4(0, 2.5, -2.3);
-        var nextPos = world.player.position.slice();
+        var nextPos = p.position.slice();
         var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
         nextPos = add(nextPos, offset.slice(0,3));
         this.position = nextPos;
@@ -213,6 +270,7 @@ Camera.prototype.view = function()
     var view = identity();
     view = mult(view, rotate(-this.rotation[0], [1, 0, 0]));
     view = mult(view, rotate(-this.rotation[1], [0, 1, 0]));
+    view = mult(view, this.baseModel);
     view = mult(view, translate(negate(this.position)));
     return view;
 }
@@ -283,14 +341,15 @@ World.prototype.addBike = function(type)
         if (dir < 4)
             break;
     }
-    var bike = new type(this.bikes.length, pos, dir);
+    var bike = new type(this.bikes.length, 0, pos, dir);
     this.bikes.push(bike);
     this.objects.push(bike);
 }
 
-function Bike(id, pos, dir)
+function Bike(id, face, pos, dir)
 {
     this.type = "bike";
+    this.face = face;
     this.position = pos.slice();
     this.spd = 100.0;
     this.dir = dir;
@@ -330,11 +389,71 @@ Bike.prototype.update = function(world)
     var dist = world.elapsed * this.spd;
 
     // Detection collision with wall
+    /*
     var wdist = Bike.nearestWalls(this.position, this.offsets);
     if (wdist[this.dir] < dist) {
         dist = wdist[this.dir];
         this.dead = true;
         this.removeWalls();
+    }
+    */
+
+    var a = world.arena.size;
+    if (this.dir == 0 && this.position[0] + dist > a[0]) {
+        dist = this.position[0] + dist - a[0];
+        var st = [false, true, false, true, false, true][this.face];
+        if (st) {
+            this.position = [a[2] - this.position[2], 0, 0];
+            this.dir = 1;
+        }
+        else {
+            this.position = [this.position[2], 0, a[2]];
+            this.dir = 3;
+        }
+        this.face = [1, 2, 3, 4, 5, 0][this.face];
+        this.pushWall();
+    }
+    if (this.dir == 1 && this.position[2] + dist > a[2]) {
+        dist = this.position[2] + dist - a[2];
+        var st = [true, false, true, false, true, false][this.face];
+        if (st) {
+            this.position = [0, 0, a[0] - this.position[0]];
+            this.dir = 0;
+        }
+        else {
+            this.position = [a[0], 0, this.position[0]];
+            this.dir = 2;
+        }
+        this.face = [2, 0, 4, 2, 0, 4][this.face];
+        this.pushWall();
+    }
+    if (this.dir == 2 && this.position[0] - dist < 0) {
+        dist = Math.abs(this.position[0] - dist);
+        var st = [false, true, false, true, false, true][this.face];
+        if (st) {
+            this.position = [this.position[2], 0, 0];
+            this.dir = 1;
+        }
+        else {
+            this.position = [a[2] - this.position[2], 0, a[2]];
+            this.dir = 3;
+        }
+        this.face = [4, 5, 0, 1, 2, 3][this.face];
+        this.pushWall();
+    }
+    if (this.dir == 3 && this.position[2] - dist < 0) {
+        dist = Math.abs(this.position[2] - dist);
+        var st = [false, true, false, true, false, true][this.face];
+        if (st) {
+            this.position = [0, 0, this.position[0]];
+            this.dir = 0;
+        }
+        else {
+            this.position = [a[0], 0, a[0] - this.position[0]];
+            this.dir = 2;
+        }
+        this.face = [5, 3, 1, 5, 3, 1][this.face];
+        this.pushWall();
     }
 
     if (this.dir == 0) this.position[0] += dist;
@@ -349,7 +468,7 @@ Bike.prototype.pushWall = function()
 {
     if(!this.dead)
     {
-        var maki = new Wall(this.position, this.position, this.dir, this.id);
+        var maki = new Wall(this.position, this.position, this.face, this.dir, this.id);
         world.objects.push(maki);
         this.prevWall = this.currentWall;
         this.currentWall = maki;
@@ -404,9 +523,9 @@ Bike.nearestWalls = function(pos, offsets)
 
 PcBike.prototype = Object.create(Bike.prototype);
 PcBike.prototype.constructor = PcBike;
-function PcBike(id, pos, dir)
+function PcBike(id, face, pos, dir)
 {
-    Bike.call(this, id, pos, dir);
+    Bike.call(this, id, face, pos, dir);
 
     addEventListener("keydown", function(e) {
         if (e.keyCode == 87) { // w
@@ -424,9 +543,9 @@ function PcBike(id, pos, dir)
 
 CpuBike.prototype = Object.create(Bike.prototype);
 CpuBike.prototype.constructor = CpuBike;
-function CpuBike(id, pos, dir)
+function CpuBike(id, face, pos, dir)
 {
-    Bike.call(this, id, pos, dir);
+    Bike.call(this, id, face, pos, dir);
 }
 
 CpuBike.prototype.update = function(world)
@@ -464,11 +583,12 @@ CpuBike.distanceFromWall = function(pos, dir)
     throw "distanceFromWall: illegal dir";
 }
 
-function Wall(start, end, dir, id)
+function Wall(start, end, face, dir, id)
 {
     this.type = "wall";
     this.start = start.slice();
     this.end = end.slice();
+    this.face = face;
     this.dir = dir;
     this.id = id;
     this.dying = false;
@@ -653,6 +773,32 @@ function initializeGeometry()
                          rotate(-90, [1, 0, 0])));
     geo.generateModel = function(obj) {
         var model = identity();
+        model = mult(model, translate(w[0] / 2, 0, w[2] / 2));
+        if (obj.face == 1) {
+            model = mult(model, translate(w[0] / 2, w[1] / 2, 0));
+            model = mult(model, rotate(90, [0, 0, 1]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        else if (obj.face == 2) {
+            model = mult(model, translate(0, w[1] / 2, w[2] / 2));
+            model = mult(model, rotate(-90, [1, 0, 0]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        else if (obj.face == 3) {
+            model = mult(model, translate(0, w[1], 0));
+            model = mult(model, rotate(180, [0, 0, 1]));
+        }
+        else if (obj.face == 4) {
+            model = mult(model, translate(-w[0] / 2, w[1] / 2, 0));
+            model = mult(model, rotate(-90, [0, 0, 1]));
+            model = mult(model, rotate(90, [0, 1, 0]));
+        }
+        else if (obj.face == 5) {
+            model = mult(model, translate(0, w[1] / 2, -w[2] / 2));
+            model = mult(model, rotate(90, [1, 0, 0]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        model = mult(model, translate(-world.arena.size[0] / 2, 0, -world.arena.size[2] / 2));
         model = mult(model, translate(obj.position));
         model = mult(model, rotate(360 - obj.dir * 90, [0, 1, 0]));
         model = mult(model, this.baseModel);
@@ -674,14 +820,41 @@ function initializeGeometry()
         res.specular = [0,0,0,0];
         return res;
     }
+    var w = world.arena.size;
     geo.generateModel = function(obj) {
         var v = subtract(obj.end, obj.start);
         var size = [0.1, 1.5 * obj.life, length(v)];
         var angle = angleBetweenY([0, 0, 1], v);
         var model = identity();
+        model = mult(model, translate(w[0] / 2, 0, w[2] / 2));
+        if (obj.face == 1) {
+            model = mult(model, translate(w[0] / 2, w[1] / 2, 0));
+            model = mult(model, rotate(90, [0, 0, 1]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        else if (obj.face == 2) {
+            model = mult(model, translate(0, w[1] / 2, w[2] / 2));
+            model = mult(model, rotate(-90, [1, 0, 0]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        else if (obj.face == 3) {
+            model = mult(model, translate(0, w[1], 0));
+            model = mult(model, rotate(180, [0, 0, 1]));
+        }
+        else if (obj.face == 4) {
+            model = mult(model, translate(-w[0] / 2, w[1] / 2, 0));
+            model = mult(model, rotate(-90, [0, 0, 1]));
+            model = mult(model, rotate(90, [0, 1, 0]));
+        }
+        else if (obj.face == 5) {
+            model = mult(model, translate(0, w[1] / 2, -w[2] / 2));
+            model = mult(model, rotate(90, [1, 0, 0]));
+            model = mult(model, rotate(-90, [0, 1, 0]));
+        }
+        model = mult(model, translate(-world.arena.size[0] / 2, 0, -world.arena.size[2] / 2));
         model = mult(model, translate(obj.start));
         model = mult(model, rotate(angle, [0, 1, 0]));
-        model = mult(model, translate(-size[0] / 2, 0, 0));
+        model = mult(model, translate(-size[0] / 2, 0, -size[0] / 2));
         model = mult(model, scale(size));
         return model;
     }
