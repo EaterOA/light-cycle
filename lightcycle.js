@@ -8,6 +8,8 @@ var geometry;
 var camera;
 var controller;
 
+var pause = false;
+
 window.onload = function init()
 {
     // Get HTML canvas element
@@ -79,21 +81,24 @@ function Camera(aspect)
 
     addEventListener("keydown", function(e) {
         var nextMode = -1;
+        
+        if(!pause)
+        {
+            if (e.keyCode == 48) // 0
+                nextMode = 0;
+            else if (e.keyCode == 49) // 1
+                nextMode = 1
+            else if (e.keyCode == 50) // 2
+                nextMode = 2;
 
-        if (e.keyCode == 48) // 0
-            nextMode = 0;
-        else if (e.keyCode == 49) // 1
-            nextMode = 1
-        else if (e.keyCode == 50) // 2
-            nextMode = 2;
-
-        if (nextMode == -1)
-            return;
-        if (nextMode == this.mode) {
-            this.mode = 1;
-        }
-        else {
-            this.mode = nextMode;
+            if (nextMode == -1)
+                return;
+            if (nextMode == this.mode) {
+                this.mode = 1;
+            }
+            else {
+                this.mode = nextMode;
+            }
         }
     }.bind(this));
 }
@@ -128,9 +133,9 @@ Camera.prototype.update = function()
         }
 
         // Attached rotation
-        if (controller.pressing[37]) // left
+        if (controller.pressing[37] && !pause) // left
             this.rotation[1] += 210 * world.elapsed;
-        if (controller.pressing[39]) // right
+        if (controller.pressing[39] && !pause) // right
             this.rotation[1] -= 210 * world.elapsed;
 
         // State adjustments based on player actions
@@ -185,39 +190,41 @@ Camera.prototype.update = function()
 
     // Free camera mode
     else {
-        if (controller.pressing[37]) // left
-            this.rotation[1] += 120 * world.elapsed;
-        if (controller.pressing[39]) // right
-            this.rotation[1] += -120 * world.elapsed;
-        if (controller.pressing[38]) // up
-            this.position[1] += 100 * world.elapsed;
-        if (controller.pressing[40]) // down
-            this.position[1] += -100 * world.elapsed;
-        if (controller.pressing[87]) { // w
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
-            stretch(100 * world.elapsed, dir);
-            this.position = add(this.position, dir.slice(0,3));
+        if(!pause)
+        {
+            if (controller.pressing[37]) // left
+                this.rotation[1] += 120 * world.elapsed;
+            if (controller.pressing[39]) // right
+                this.rotation[1] += -120 * world.elapsed;
+            if (controller.pressing[38]) // up
+                this.position[1] += 100 * world.elapsed;
+            if (controller.pressing[40]) // down
+                this.position[1] += -100 * world.elapsed;
+            if (controller.pressing[87]) { // w
+                var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
+                stretch(100 * world.elapsed, dir);
+                this.position = add(this.position, dir.slice(0,3));
+            }
+            if (controller.pressing[65]) { // a
+                var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
+                stretch(100 * world.elapsed, dir);
+                this.position = add(this.position, dir.slice(0,3));
+            }
+            if (controller.pressing[83]) { // s
+                var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
+                stretch(100 * world.elapsed, dir);
+                this.position = add(this.position, dir.slice(0,3));
+            }
+            if (controller.pressing[68]) { // d
+                var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
+                stretch(100 * world.elapsed, dir);
+                this.position = add(this.position, dir.slice(0,3));
+            }
+            if (controller.pressing[90]) // z
+                this.rotation[0] += 50 * world.elapsed;
+            if (controller.pressing[88]) // x
+                this.rotation[0] += -50 * world.elapsed;
         }
-        if (controller.pressing[65]) { // a
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
-            stretch(100 * world.elapsed, dir);
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        if (controller.pressing[83]) { // s
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
-            stretch(100 * world.elapsed, dir);
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        if (controller.pressing[68]) { // d
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
-            stretch(100 * world.elapsed, dir);
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        if (controller.pressing[90]) // z
-            this.rotation[0] += 50 * world.elapsed;
-        if (controller.pressing[88]) // x
-            this.rotation[0] += -50 * world.elapsed;
-
         var m = identity();
         m = mult(m, rotate(this.rotation[1], [0, 1, 0]));
         m = mult(m, rotate(this.rotation[0], [1, 0, 0]));
@@ -269,20 +276,23 @@ World.prototype.update = function(time)
     this.elapsed = time - this.time;
     this.time = time;
 
-    for (var i = 0; i < this.objects.length; i++) {
-        var obj = this.objects[i];
-        if (obj.update)
-            obj.update(this);
-    }
+    if(!pause)
+    {
+        for (var i = 0; i < this.objects.length; i++) {
+            var obj = this.objects[i];
+            if (obj.update)
+                obj.update(this);
+        }
 
-    var newList = [];
-    for (var i = 0; i < this.objects.length; i++) {
-        var obj = this.objects[i];
-        if (obj.type == "wall" && obj.dead) {}
-        else
-            newList.push(obj);
+        var newList = [];
+        for (var i = 0; i < this.objects.length; i++) {
+            var obj = this.objects[i];
+            if (obj.type == "wall" && obj.dead) {}
+            else
+                newList.push(obj);
+        }
+        this.objects = newList;
     }
-    this.objects = newList;
 }
 
 World.prototype.addBike = function(type)
@@ -599,15 +609,27 @@ function PcBike(id, face, pos, dir)
     Bike.call(this, id, face, pos, dir);
 
     addEventListener("keydown", function(e) {
-        if (e.keyCode == 87) { // w
-        }
-        else if (e.keyCode == 65) { // a
-            this.turn(false);
-        }
-        else if (e.keyCode == 83) { // s
-        }
-        else if (e.keyCode == 68) { // d
-            this.turn(true);
+
+        if(!pause)
+        {
+            if (e.keyCode == 87) { // w
+                if(this.spd == 50)
+                    this.spd = 100;                
+                else
+                    this.spd = 200;            
+            }
+            else if (e.keyCode == 65) { // a
+                this.turn(false);
+            }
+            else if (e.keyCode == 83) { // s
+                if(this.spd == 200)
+                    this.spd = 100;
+                else
+                    this.spd = 50;
+            }
+            else if (e.keyCode == 68) { // d
+                this.turn(true);
+            }
         }
     }.bind(this));
 }
@@ -856,6 +878,16 @@ function initializeGeometry()
             res.ambient = [0.3, 0.4, 0.37];
             res.diffuse = [0.1, 0.13, 0.1];
         }
+        
+        if(pause)
+        {
+            for(var i = 0; i < 3; i++)
+            {
+                res.ambient[i] *= 0.1;
+                res.diffuse[i] *= 0.1;			
+            }
+		}
+        
         return res;
     }
     geo.baseModel = mult(scale(1.4, 1.47, 1.4),
@@ -1104,6 +1136,25 @@ function Controller()
 Controller.prototype.keydown = function(e)
 {
     this.pressing[e.keyCode] = true;
+    if (e.keyCode == 80) { // p 
+        if(pause)
+        {
+            document.getElementById("resume").style.visibility = "hidden";
+        }
+        else
+        {
+            document.getElementById("resume").style.visibility = "visible";
+        }
+        
+        pause = !pause;            
+        geo = geometry.arena;
+        geo.texture = gl.createTexture();
+        if(!pause)
+            image = document.getElementById("arenaTexture");
+        else
+            image = document.getElementById("arenaTexturePause");
+        configureTexture(geo.texture, image); 
+    }
 }
 
 Controller.prototype.keyup = function(e)
