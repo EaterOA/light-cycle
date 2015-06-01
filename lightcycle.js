@@ -182,6 +182,48 @@ Camera.prototype.update = function()
             this.prevUp = mix(this.prevUp, this.up, 0.2);
         }
     }
+
+    // Free camera mode
+    else {
+        if (controller.pressing[37]) // left
+            this.rotation[1] += 120 * world.elapsed;
+        if (controller.pressing[39]) // right
+            this.rotation[1] += -120 * world.elapsed;
+        if (controller.pressing[38]) // up
+            this.position[1] += 100 * world.elapsed;
+        if (controller.pressing[40]) // down
+            this.position[1] += -100 * world.elapsed;
+        if (controller.pressing[87]) { // w
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[65]) { // a
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[83]) { // s
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[68]) { // d
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[90]) // z
+            this.rotation[0] += 50 * world.elapsed;
+        if (controller.pressing[88]) // x
+            this.rotation[0] += -50 * world.elapsed;
+
+        var m = identity();
+        m = mult(m, rotate(this.rotation[1], [0, 1, 0]));
+        m = mult(m, rotate(this.rotation[0], [1, 0, 0]));
+        this.dir = transform(m, [0, 0, -1]);
+        this.up = transform(m, [0, 1, 0]);
+    }
 }
 
 Camera.prototype.view = function()
@@ -310,6 +352,7 @@ Bike.prototype.update = function(world)
 
     var a = world.arena.size;
     if (this.dir == 0 && this.position[0] + dist > a[0]) {
+        this.currentWall.extend(a[0] - this.position[0]);
         dist = this.position[0] + dist - a[0];
         var st = [false, true, false, true, false, true][this.face];
         if (st) {
@@ -323,7 +366,8 @@ Bike.prototype.update = function(world)
         this.face = [1, 2, 3, 4, 5, 0][this.face];
         this.pushWall();
     }
-    if (this.dir == 1 && this.position[2] + dist > a[2]) {
+    else if (this.dir == 1 && this.position[2] + dist > a[2]) {
+        this.currentWall.extend(a[2] - this.position[2]);
         dist = this.position[2] + dist - a[2];
         var st = [true, false, true, false, true, false][this.face];
         if (st) {
@@ -337,7 +381,8 @@ Bike.prototype.update = function(world)
         this.face = [2, 0, 4, 2, 0, 4][this.face];
         this.pushWall();
     }
-    if (this.dir == 2 && this.position[0] - dist < 0) {
+    else if (this.dir == 2 && this.position[0] - dist < 0) {
+        this.currentWall.extend(this.position[0]);
         dist = Math.abs(this.position[0] - dist);
         var st = [false, true, false, true, false, true][this.face];
         if (st) {
@@ -351,7 +396,8 @@ Bike.prototype.update = function(world)
         this.face = [4, 5, 0, 1, 2, 3][this.face];
         this.pushWall();
     }
-    if (this.dir == 3 && this.position[2] - dist < 0) {
+    else if (this.dir == 3 && this.position[2] - dist < 0) {
+        this.currentWall.extend(this.position[2]);
         dist = Math.abs(this.position[2] - dist);
         var st = [false, true, false, true, false, true][this.face];
         if (st) {
