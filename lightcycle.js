@@ -66,7 +66,8 @@ function Camera(aspect)
     this.fovx = 60;
     this.position = [1, 10, 20];
     this.rotation = [-10, 0, 0];
-    this.baseModel;
+    this.dir = [0, 0, -1];
+    this.up = [0, 1, 0];
     this.mode = 1;
 
     addEventListener("keydown", function(e) {
@@ -102,8 +103,17 @@ Camera.prototype.update = function()
             var offset = angleDiff(prevTrueAngle, this.rotation[1]);
             var trueAngle = 270 - p.dir * 90;
             this.rotation[1] = normalizeAngle(trueAngle + offset);
+
+            this.transitioning = true;
+            this.transitionNum = 0.0;
         }
         this.bikePrevFace = p.face;
+
+        if (this.transitioning) {
+            this.transitionNum += world.elapsed;
+            if (this.transitionNum >= 1)
+                this.transitioning = false;
+        }
 
         // Attached rotation
         if (controller.pressing[37]) // left
@@ -112,7 +122,7 @@ Camera.prototype.update = function()
             this.rotation[1] -= 210 * world.elapsed;
 
         // State adjustments based on player actions
-        var bikeTurned = this.bikePrevDir != p.dir && this.bikePrevDir == p.face;
+        var bikeTurned = this.bikePrevDir != p.dir && this.bikePrevFace == p.face;
         if (bikeTurned)
             this.fullOffset = true;
         this.bikePrevDir = p.dir;
@@ -121,7 +131,6 @@ Camera.prototype.update = function()
             this.fullOffset = false;
 
         // Adjust direction
-        this.rotation[0] = -10;
         var maxOffset = this.fullOffset ? 12 : 35;
         var snapMult = rotating ? 1.2 : 1.5;
         var curAngle = this.rotation[1];
@@ -137,6 +146,11 @@ Camera.prototype.update = function()
             curAngle += rotateSpd * world.elapsed;
             this.rotation[1] = normalizeAngle(curAngle);
         }
+        var m = identity();
+        m = mult(m, rotate(this.rotation[1], [0, 1, 0]));
+        m = mult(m, rotate(this.rotation[0], [1, 0, 0]));
+        this.dir = transform(m, vec4([0, 0, -1])).slice(0,3);
+        this.up = transform(m, vec4([0, 1, 0])).slice(0,3);
 
         // Adjust position
         var anchor = vec4(0, 8.5, 30);
@@ -145,84 +159,21 @@ Camera.prototype.update = function()
         nextPos = add(nextPos, offset.slice(0,3));
         this.position = nextPos;
 
-        this.baseModel = geometry.cubeUnrotate[p.face];
-    }
-
-    // First-person perspective mode
-    else if (this.mode == 2 && p) {
-
-        // Attached rotation
-        if (controller.pressing[37]) // left
-            this.rotation[1] += 300 * world.elapsed;
-        if (controller.pressing[39]) // right
-            this.rotation[1] -= 300 * world.elapsed;
-
-        // Adjust direction
-        var rotating = controller.pressing[37] || controller.pressing[39];
-        var snapMult = rotating ? 1.4 : 1.7;
-        var curAngle = this.rotation[1];
-        var trueAngle = 270 - p.dir * 90;
-        var diff = angleDiff(curAngle, trueAngle);
-        var sign = (diff >= 0 ? 1.0 : -1.0);
-        var rotateSpd = sign * (Math.pow(Math.abs(diff), snapMult) + 20);
-        var rotateAmt = rotateSpd * world.elapsed;
-        if (Math.abs(rotateAmt) > Math.abs(diff))
-            rotateAmt = diff;
-        curAngle += rotateAmt;
-        this.rotation[1] = normalizeAngle(curAngle);
-
-        // Adjust position
-        var anchor = vec4(0, 2.5, -2.3);
-        var nextPos = p.position.slice();
-        var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
-        nextPos = add(nextPos, offset.slice(0,3));
-        this.position = nextPos;
-    }
-
-    // Free camera mode
-    else {
-        if (controller.pressing[37]) // left
-            this.rotation[1] += 120 * world.elapsed;
-        if (controller.pressing[39]) // right
-            this.rotation[1] += -120 * world.elapsed;
-        if (controller.pressing[38]) // up
-            this.position[1] += 100 * world.elapsed;
-        if (controller.pressing[40]) // down
-            this.position[1] += -100 * world.elapsed;
-        if (controller.pressing[87]) { // w
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
-            stretch(100 * world.elapsed, dir);
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        if (controller.pressing[65]) { // a
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
-            stretch(100 * world.elapsed, dir);
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        if (controller.pressing[83]) { // s
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
-            stretch(100 * world.elapsed, dir);
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        if (controller.pressing[68]) { // d
-            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
-            stretch(100 * world.elapsed, dir);
-            this.position = add(this.position, dir.slice(0,3));
-        }
-        if (controller.pressing[90]) // z
-            this.rotation[0] += 50 * world.elapsed;
-        if (controller.pressing[88]) // x
-            this.rotation[0] += -50 * world.elapsed;
+        this.position = transform(geometry.cubeRotate[p.face], this.position);
+        this.dir = transform(geometry.cubeORotate[p.face], this.dir);
+        this.up = transform(geometry.cubeORotate[p.face], this.up);
     }
 }
 
 Camera.prototype.view = function()
 {
+    var r1 = angleBetween(this.up, [0, 1, 0]);
+    var vv = transform(rotate(r1.angle, r1.axis), this.dir).slice(0,3);
+    var r2 = angleBetween(vv, [0, 0, -1]);
     var view = identity();
-    view = mult(view, rotate(-this.rotation[0], [1, 0, 0]));
-    view = mult(view, rotate(-this.rotation[1], [0, 1, 0]));
+    view = mult(view, rotate(r2.angle, r2.axis));
+    view = mult(view, rotate(r1.angle, r1.axis));
     view = mult(view, translate(negate(this.position)));
-    view = mult(view, this.baseModel);
     return view;
 }
 
@@ -589,32 +540,20 @@ function initializeGeometry()
 
     geometry = {};
 
-    geo = geometry.cubeRotate = [];
-    var r = [identity(),
-             mult(rotate(-90, [-1,0,0]), rotate(90, [0,0,1])),
-             mult(rotate(-90, [0,0,-1]), rotate(-90, [1,0,0])),
-             rotate(180, [0,0,1]),
-             mult(rotate(90, [1,0,0]), rotate(-90, [0,0,1])),
-             mult(rotate(-90, [0,0,1]), rotate(90, [1,0,0]))]
-    for (var i = 0; i < r.length; i++) {
-        var m = identity();
-        m = mult(m, translate(stretched(0.5, world.arena.size)));
-        m = mult(m, r[i]);
-        m = mult(m, translate(stretched(-0.5, world.arena.size)));
-        geo.push(m);
-    }
+    geometry.cubeORotate = [
+        identity(),
+        mult(rotate(-90, [-1,0,0]), rotate(90, [0,0,1])),
+        mult(rotate(-90, [0,0,-1]), rotate(-90, [1,0,0])),
+        rotate(180, [0,0,1]),
+        mult(rotate(90, [1,0,0]), rotate(-90, [0,0,1])),
+        mult(rotate(-90, [0,0,1]), rotate(90, [1,0,0]))
+    ]
 
-    geo = geometry.cubeUnrotate = [];
-    var r = [identity(),
-             mult(rotate(-90, [0,0,1]), rotate(90, [-1,0,0])),
-             mult(rotate(90, [1,0,0]), rotate(90, [0,0,-1])),
-             rotate(180, [0,0,1]),
-             mult(rotate(90, [0,0,1]), rotate(-90, [1,0,0])),
-             mult(rotate(-90, [1,0,0]), rotate(90, [0,0,1]))]
-    for (var i = 0; i < r.length; i++) {
+    geo = geometry.cubeRotate = [];
+    for (var i = 0; i < geometry.cubeORotate.length; i++) {
         var m = identity();
         m = mult(m, translate(stretched(0.5, world.arena.size)));
-        m = mult(m, r[i]);
+        m = mult(m, geometry.cubeORotate[i]);
         m = mult(m, translate(stretched(-0.5, world.arena.size)));
         geo.push(m);
     }
@@ -645,7 +584,7 @@ function initializeGeometry()
     geo.colorScale = false;
     geo.update = function(world, obj) {
         var trans = [];
-        var cpos = transform(geometry.cubeRotate[world.player.face], vec4(camera.position)).slice(0, 3);
+        var cpos = camera.position;
         if (cpos[1] <= 0) trans.push(0);
         if (cpos[2] <= 0) trans.push(1);
         if (cpos[2] >= world.arena.size[2]) trans.push(2);

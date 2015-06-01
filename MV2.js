@@ -28,6 +28,12 @@ function degrees(r)
 // Applies mat to vec
 function transform(mat, vec)
 {
+    var v3 = false;
+    if (vec.length == 3) {
+        vec = vec4(vec);
+        v3 = true;
+    }
+
     var res = [];
     for (var i = 0; i < mat.length; i++) {
         var sum = 0.0;
@@ -35,7 +41,7 @@ function transform(mat, vec)
             sum += mat[i][j] * vec[j];
         res.push(sum);
     }
-    return res;
+    return v3 ? res.slice(0,3) : res;
 }
 
 // Bounds the angle to [0, 360) degrees
@@ -163,6 +169,20 @@ function angleBetweenY(v, u)
     var dotp = dot(v, u);
     var crossp = cross(v, u);
     return degrees(Math.atan2(crossp[1], dotp));
+}
+
+function angleBetween(v, u)
+{
+    if (equal(v, u))
+        return {"angle": 0, "axis": [1,1,1]};
+
+    var res = {};
+    var dotp = dot(v, u);
+    var crossp = cross(v, u);
+
+    res.axis = crossp;
+    res.angle = degrees(Math.atan2(length(crossp), dotp));
+    return res;
 }
 
 // Applies mat to all vertices in arr
