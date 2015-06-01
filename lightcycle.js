@@ -149,14 +149,14 @@ Camera.prototype.update = function()
         var m = identity();
         m = mult(m, rotate(this.rotation[1], [0, 1, 0]));
         m = mult(m, rotate(this.rotation[0], [1, 0, 0]));
-        this.dir = transform(m, vec4([0, 0, -1])).slice(0,3);
-        this.up = transform(m, vec4([0, 1, 0])).slice(0,3);
+        this.dir = transform(m, [0, 0, -1]);
+        this.up = transform(m, [0, 1, 0]);
 
         // Adjust position
-        var anchor = vec4(0, 8.5, 30);
+        var anchor = [0, 8.5, 30];
         var nextPos = p.position.slice();
         var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
-        nextPos = add(nextPos, offset.slice(0,3));
+        nextPos = add(nextPos, offset);
         this.position = nextPos;
 
         this.position = transform(geometry.cubeRotate[p.face], this.position);
@@ -168,7 +168,7 @@ Camera.prototype.update = function()
 Camera.prototype.view = function()
 {
     var r1 = angleBetween(this.up, [0, 1, 0]);
-    var vv = transform(rotate(r1.angle, r1.axis), this.dir).slice(0,3);
+    var vv = transform(rotate(r1.angle, r1.axis), this.dir);
     var r2 = angleBetween(vv, [0, 0, -1]);
     var view = identity();
     view = mult(view, rotate(r2.angle, r2.axis));
