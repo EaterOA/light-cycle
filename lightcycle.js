@@ -106,11 +106,16 @@ Camera.prototype.update = function()
 
             this.transitioning = true;
             this.transitionNum = 0.0;
+            this.transitionSpd = 2.0;
+            this.prevDir = this.dir;
+            this.prevUp = this.up;
+            this.prevPos = this.position;
         }
         this.bikePrevFace = p.face;
 
         if (this.transitioning) {
-            this.transitionNum += world.elapsed;
+            this.transitionSpd -= 1.7 * world.elapsed;
+            this.transitionNum += this.transitionSpd * world.elapsed;
             if (this.transitionNum >= 1)
                 this.transitioning = false;
         }
@@ -154,14 +159,21 @@ Camera.prototype.update = function()
 
         // Adjust position
         var anchor = [0, 8.5, 30];
-        var nextPos = p.position.slice();
         var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
-        nextPos = add(nextPos, offset);
-        this.position = nextPos;
+        this.position = add(p.position, offset);
 
         this.position = transform(geometry.cubeRotate[p.face], this.position);
         this.dir = transform(geometry.cubeORotate[p.face], this.dir);
         this.up = transform(geometry.cubeORotate[p.face], this.up);
+
+        if (this.transitioning) {
+            this.position = mix(this.prevPos, this.position, this.transitionNum);
+            this.dir = mix(normalize(this.prevDir), normalize(this.dir), this.transitionNum);
+            this.up = mix(normalize(this.prevUp), normalize(this.up), this.transitionNum);
+            this.prevPos = mix(this.prevPos, this.position, 0.2);
+            this.prevDir = mix(this.prevDir, this.dir, 0.2);
+            this.prevUp = mix(this.prevUp, this.up, 0.2);
+        }
     }
 }
 

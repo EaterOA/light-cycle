@@ -173,15 +173,13 @@ function angleBetweenY(v, u)
 
 function angleBetween(v, u)
 {
-    if (equal(v, u))
-        return {"angle": 0, "axis": [1,1,1]};
-
     var res = {};
     var dotp = dot(v, u);
     var crossp = cross(v, u);
+    var lcrossp = length(crossp);
 
-    res.axis = crossp;
-    res.angle = degrees(Math.atan2(length(crossp), dotp));
+    res.axis = lcrossp ? crossp : [1,1,1];
+    res.angle = normalizeAngle(degrees(Math.atan2(lcrossp, dotp)));
     return res;
 }
 
