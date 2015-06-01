@@ -45,6 +45,13 @@ window.onload = function init()
     world = new World();
     world.addBike(PcBike);
     world.player = world.bikes[0];
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
+    world.addBike(CpuBike);
 
     // Create the geometry used in World objects
     initializeGeometry();
@@ -245,17 +252,8 @@ World.prototype.addBike = function(type)
 
     var range = this.arena.size;
     var safe = 200;
-    var pos, dir;
-    while (true) {
-        pos = [rand(0, range[0]), 0, rand(0, range[2])];
-        var wdist = Bike.nearestWalls(pos);
-        for (dir = 0; dir < 4; dir++)
-            if (wdist[dir] >= safe)
-                break;
-        if (dir < 4)
-            break;
-    }
-    var bike = new type(this.bikes.length, 0, pos, dir);
+    var pos = [rand(safe, range[0]-safe), 0, rand(safe, range[2])];
+    var bike = new type(this.bikes.length, randint(0, 5), pos, randint(0, 3));
     this.bikes.push(bike);
     this.objects.push(bike);
 }
@@ -303,14 +301,12 @@ Bike.prototype.update = function(world)
     var dist = world.elapsed * this.spd;
 
     // Detection collision with wall
-    /*
-    var wdist = Bike.nearestWalls(this.position, this.offsets);
+    var wdist = this.nearestWalls();
     if (wdist[this.dir] < dist) {
         dist = wdist[this.dir];
         this.dead = true;
         this.removeWalls();
     }
-    */
 
     var a = world.arena.size;
     if (this.dir == 0 && this.position[0] + dist > a[0]) {
@@ -389,49 +385,164 @@ Bike.prototype.pushWall = function()
     }
 }
 
-Bike.nearestWalls = function(pos, offsets)
+Bike.prototype.nearestWalls = function()
 {
-    if (typeof(offsets) == "undefined")
-        offsets = [0, 0];
-
-    var x = pos[0];
-    var z = pos[2];
-    var s = offsets[1];
+    var facemap = [
+        [0, 1, 2, 3, 4, 5],
+        [2, 0, 1, 5, 3, 4],
+        [4, 5, 0, 1, 2, 3],
+        [3, 4, 2, 0, 1, 5],
+        [2, 3, 4, 5, 0, 1],
+        [1, 5, 3, 4, 2, 0],
+    ][this.face];
+    var st = [true, false, true, false, true, false][this.face];
+    var x = this.position[0];
+    var z = this.position[2];
+    var s = this.offsets[1];
+    var a = world.arena.size;
     var objs = world.objects;
-    var dists = [world.arena.size[0] - x, world.arena.size[2] - z, x, z];
+    var dists = [Infinity, Infinity, Infinity, Infinity];
     for (var i = 0; i < objs.length; i++)
     {
-        if (objs[i].type == "wall")
+        if (objs[i].type == "wall" && objs[i] != this.currentWall)
         {
             var wall = objs[i];
-            if ((wall.start[0]-s <= x && x <= wall.end[0]+s) ||
-                (wall.end[0]-s <= x && x <= wall.start[0]+s))
-            {
-                var t = wall.start[2] - z;
-                var te = wall.end[2] - z;
-                if (Math.abs(te) < Math.abs(t))
-                    t = te;
-                if (t > 0 && t < dists[1])
-                    dists[1] = t;
-                else if (t < 0 && -t < dists[3])
-                    dists[3] = -t;
+            wall = {start:wall.start, end:wall.end, face:facemap[wall.face]};
+            var vwalls = [];
+            if (wall.face == 0) {
+                vwalls.push(wall);
+                vwalls.push({
+                    start: [4*a[0] + wall.start[0], 0, wall.start[2]],
+                    end: [4*a[0] + wall.end[0], 0, wall.end[2]]});
+                vwalls.push({
+                    start: [-4*a[0] + wall.start[0], 0, wall.start[2]],
+                    end: [-4*a[0] + wall.end[0], 0, wall.end[2]]});
+                vwalls.push({
+                    start: [wall.start[0], 0, 4*a[2] + wall.start[2]],
+                    end: [wall.end[0], 0, 4*a[2] + wall.end[2]]});
+                vwalls.push({
+                    start: [wall.start[0], 0, -4*a[2] + wall.start[2]],
+                    end: [wall.end[0], 0, -4*a[2] + wall.end[2]]});
             }
-            if ((wall.start[2]-s <= z && z <= wall.end[2]+s) ||
-                (wall.end[2]-s <= z && z <= wall.start[2]+s))
-            {
-                var t = wall.start[0] - x;
-                var te = wall.end[0] - x;
-                if (Math.abs(te) < Math.abs(t))
-                    t = te;
-                if (t > 0 && t < dists[0])
-                    dists[0] = t;
-                else if (t < 0 && -t < dists[2])
-                    dists[2] = -t;
+            else if (wall.face == 1) {
+                if (st) {
+                    vwalls.push({
+                        start: [a[0] + a[2]-wall.start[2], 0, wall.start[0]],
+                        end: [a[0] + a[2]-wall.end[2], 0, wall.end[0]]});
+                    vwalls.push({
+                        start: [-3*a[0] + a[2]-wall.start[2], 0, wall.start[0]],
+                        end: [-3*a[0] + a[2]-wall.end[2], 0, wall.end[0]]});
+                }
+                else {
+                    vwalls.push({
+                        start: [a[0] + wall.start[2], 0, a[0]-wall.start[0]],
+                        end: [a[0] + wall.end[2], 0, a[0]-wall.end[0]]});
+                    vwalls.push({
+                        start: [-3*a[0] + wall.start[2], 0, a[0]-wall.start[0]],
+                        end: [-3*a[0] + wall.end[2], 0, a[0]-wall.end[0]]});
+                }
+            }
+            else if (wall.face == 2) {
+                if (st) {
+                    vwalls.push({
+                        start: [a[2]-wall.start[2], 0, a[2] + wall.start[0]],
+                        end: [a[2]-wall.end[2], 0, a[2] + wall.end[0]]});
+                    vwalls.push({
+                        start: [a[2]-wall.start[2], 0, -3*a[2] + wall.start[0]],
+                        end: [a[2]-wall.end[2], 0, -3*a[2] + wall.end[0]]});
+                }
+                else {
+                    vwalls.push({
+                        start: [wall.start[2], 0, a[2] + a[0]-wall.start[0]],
+                        end: [wall.end[2], 0, a[2] + a[0]-wall.end[0]]});
+                    vwalls.push({
+                        start: [wall.start[2], 0, -3*a[2] + a[0]-wall.start[0]],
+                        end: [wall.end[2], 0, -3*a[2] + a[0]-wall.end[0]]});
+                }
+            }
+            else if (wall.face == 3) {
+                vwalls.push({
+                    start: [2*a[0] + wall.start[0], 0, wall.start[2]],
+                    end: [2*a[0] + wall.end[0], 0, wall.end[2]]});
+                vwalls.push({
+                    start: [-2*a[0] + wall.start[0], 0, wall.start[2]],
+                    end: [-2*a[0] + wall.end[0], 0, wall.end[2]]});
+                vwalls.push({
+                    start: [wall.start[0], 0, 2*a[2] + wall.start[2]],
+                    end: [wall.end[0], 0, 2*a[2] + wall.end[2]]});
+                vwalls.push({
+                    start: [wall.start[0], 0, -2*a[2] + wall.start[2]],
+                    end: [wall.end[0], 0, -2*a[2] + wall.end[2]]});
+            }
+            else if (wall.face == 4) {
+                if (st) {
+                    vwalls.push({
+                        start: [3*a[0] + wall.start[2], 0, a[0]-wall.start[0]],
+                        end: [3*a[0] + wall.end[2], 0, a[0]-wall.end[0]]});
+                    vwalls.push({
+                        start: [-1*a[0] + wall.start[2], 0, a[0]-wall.start[0]],
+                        end: [-1*a[0] + wall.end[2], 0, a[0]-wall.end[0]]});
+                }
+                else {
+                    vwalls.push({
+                        start: [3*a[0] + a[2]-wall.start[2], 0, wall.start[0]],
+                        end: [3*a[0] + a[2]-wall.end[2], 0, wall.end[0]]});
+                    vwalls.push({
+                        start: [-1*a[0] + a[2]-wall.start[2], 0, wall.start[0]],
+                        end: [-1*a[0] + a[2]-wall.end[2], 0, wall.end[0]]});
+                }
+            }
+            else if (wall.face == 5) {
+                if (st) {
+                    vwalls.push({
+                        start: [a[2]-wall.start[2], 0, 3*a[2] + wall.start[0]],
+                        end: [a[2]-wall.end[2], 0, 3*a[2] + wall.end[0]]});
+                    vwalls.push({
+                        start: [a[2]-wall.start[2], 0, -1*a[2] + wall.start[0]],
+                        end: [a[2]-wall.end[2], 0, -1*a[2] + wall.end[0]]});
+                }
+                else {
+                    vwalls.push({
+                        start: [wall.start[2], 0, 3*a[2] + a[0]-wall.start[0]],
+                        end: [wall.end[2], 0, 3*a[2] + a[0]-wall.end[0]]});
+                    vwalls.push({
+                        start: [wall.start[2], 0, -1*a[2] + a[0]-wall.start[0]],
+                        end: [wall.end[2], 0, -1*a[2] + a[0]-wall.end[0]]});
+                }
+            }
+
+            for (var j = 0; j < vwalls.length; j++) {
+                var wall = vwalls[j];
+
+                if ((wall.start[0]-s <= x && x <= wall.end[0]+s) ||
+                    (wall.end[0]-s <= x && x <= wall.start[0]+s))
+                {
+                    var t = wall.start[2] - z;
+                    var te = wall.end[2] - z;
+                    if (Math.abs(te) < Math.abs(t))
+                        t = te;
+                    if (t > 0 && t < dists[1])
+                        dists[1] = t;
+                    else if (t < 0 && -t < dists[3])
+                        dists[3] = -t;
+                }
+                if ((wall.start[2]-s <= z && z <= wall.end[2]+s) ||
+                    (wall.end[2]-s <= z && z <= wall.start[2]+s))
+                {
+                    var t = wall.start[0] - x;
+                    var te = wall.end[0] - x;
+                    if (Math.abs(te) < Math.abs(t))
+                        t = te;
+                    if (t > 0 && t < dists[0])
+                        dists[0] = t;
+                    else if (t < 0 && -t < dists[2])
+                        dists[2] = -t;
+                }
             }
         }
     }
     for (var i = 0; i < dists.length; i++)
-        dists[i] -= offsets[0];
+        dists[i] -= this.offsets[0];
     return dists;
 }
 
@@ -466,7 +577,7 @@ CpuBike.prototype.update = function(world)
 {
     var pika = 10;
     var dist = world.elapsed * this.spd;
-    var wdist = Bike.nearestWalls(this.position, this.offsets);
+    var wdist = this.nearestWalls();
     var cdist = wdist[this.dir];
     var rcdist = wdist[(this.dir + 1) % 4];
     var lcdist = wdist[(this.dir + 3) % 4];
@@ -947,10 +1058,6 @@ function Controller()
 Controller.prototype.keydown = function(e)
 {
     this.pressing[e.keyCode] = true;
-
-    if (e.keyCode == 80) { // p (for debug purposes)
-        console.log(world.bikes[1].dir, flatten(Bike.nearestWalls(cameraPosition)));
-    }
 }
 
 Controller.prototype.keyup = function(e)

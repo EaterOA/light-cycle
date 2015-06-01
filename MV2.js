@@ -16,6 +16,11 @@ function rand(low, high)
     return Math.random() * (high-low) + low;
 }
 
+function randint(low, high)
+{
+    return Math.floor(rand(low, high));
+}
+
 
 // ------------- geometry -------------
 
