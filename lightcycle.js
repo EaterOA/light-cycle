@@ -47,13 +47,8 @@ window.onload = function init()
     world = new World();
     world.addBike(PcBike);
     world.player = world.bikes[0];
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
-    world.addBike(CpuBike);
+    for (var i = 0; i < 15; i++)
+        world.addBike(CpuBike);
 
     // Create the geometry used in World objects
     initializeGeometry();
@@ -66,6 +61,7 @@ window.onload = function init()
     world.time = window.performance.now() / 1000;
 
     // Start game
+    controller.pause(true);
     requestAnimFrame(render);
 }
 
@@ -277,7 +273,7 @@ function World()
     var arena = {};
     arena.type = "arena";
     arena.position = [0, 0, 0];
-    arena.size = [1000, 1000, 1000];
+    arena.size = [500, 500, 500];
     this.objects.push(arena);
 
     this.arena = arena;
@@ -311,11 +307,6 @@ World.prototype.update = function(time)
 
 World.prototype.addBike = function(type)
 {
-    if (this.bikes.length >= this.bikeLimit) {
-        console.log("addBike: reached bike limit");
-        return;
-    }
-
     var range = this.arena.size;
     var safe = 200;
     var pos = [rand(safe, range[0]-safe), 0, rand(safe, range[2])];
@@ -762,10 +753,10 @@ function initializeGeometry()
     }
 
     geo = geometry.light = {};
-    geo.position = [500, 500, 500];
+    geo.position = [250, 250, 250];
 
     geo = geometry.arena = {};
-    geo.shape = makeCube(100);
+    geo.shape = makeCube(50);
     geo.vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.vertexBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(geo.shape.vertices), gl.DYNAMIC_DRAW);
@@ -1035,9 +1026,9 @@ function render(time)
                 lighting = lighting(obj);
             }
             if (!prevGeo || prevGeo.lighting != lighting) {
-                var ambient = vec4(lighting.ambient);
                 var diffuse = vec4(lighting.diffuse);
                 var specular = vec4(lighting.specular);
+                var ambient = vec4(lighting.ambient);
                 setUniform(gl.uniform4fv, "ambient", flatten(ambient));
                 setUniform(gl.uniform4fv, "diffuse", flatten(diffuse));
                 setUniform(gl.uniform4fv, "specular", flatten(specular));
@@ -1132,27 +1123,35 @@ function Controller()
     addEventListener("keyup", this.keyup.bind(this));
 }
 
+Controller.prototype.pause = function(p)
+{
+    if (pause == p)
+        return;
+
+    if(pause)
+    {
+        document.getElementById("resume").style.visibility = "hidden";
+    }
+    else
+    {
+        document.getElementById("resume").style.visibility = "visible";
+    }
+
+    pause = !pause;
+    geo = geometry.arena;
+    geo.texture = gl.createTexture();
+    if(!pause)
+        image = document.getElementById("arenaTexture");
+    else
+        image = document.getElementById("arenaTexturePause");
+    configureTexture(geo.texture, image);
+}
+
 Controller.prototype.keydown = function(e)
 {
     this.pressing[e.keyCode] = true;
-    if (e.keyCode == 80) { // p
-        if(pause)
-        {
-            document.getElementById("resume").style.visibility = "hidden";
-        }
-        else
-        {
-            document.getElementById("resume").style.visibility = "visible";
-        }
-
-        pause = !pause;
-        geo = geometry.arena;
-        geo.texture = gl.createTexture();
-        if(!pause)
-            image = document.getElementById("arenaTexture");
-        else
-            image = document.getElementById("arenaTexturePause");
-        configureTexture(geo.texture, image);
+    if (e.keyCode == 80 || e.keyCode == 32) { // p | space
+        this.pause(!pause);
     }
 }
 
