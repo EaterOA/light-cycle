@@ -81,7 +81,7 @@ function Camera(aspect)
 
     addEventListener("keydown", function(e) {
         var nextMode = -1;
-        
+
         if(!pause)
         {
             if (e.keyCode == 48) // 0
@@ -614,9 +614,9 @@ function PcBike(id, face, pos, dir)
         {
             if (e.keyCode == 87) { // w
                 if(this.spd == 50)
-                    this.spd = 100;                
+                    this.spd = 100;
                 else
-                    this.spd = 200;            
+                    this.spd = 200;
             }
             else if (e.keyCode == 65) { // a
                 this.turn(false);
@@ -878,16 +878,16 @@ function initializeGeometry()
             res.ambient = [0.3, 0.4, 0.37];
             res.diffuse = [0.1, 0.13, 0.1];
         }
-        
+
         if(pause)
         {
             for(var i = 0; i < 3; i++)
             {
                 res.ambient[i] *= 0.1;
-                res.diffuse[i] *= 0.1;			
+                res.diffuse[i] *= 0.1;
             }
-		}
-        
+        }
+
         return res;
     }
     geo.baseModel = mult(scale(1.4, 1.47, 1.4),
@@ -1136,7 +1136,7 @@ function Controller()
 Controller.prototype.keydown = function(e)
 {
     this.pressing[e.keyCode] = true;
-    if (e.keyCode == 80) { // p 
+    if (e.keyCode == 80) { // p
         if(pause)
         {
             document.getElementById("resume").style.visibility = "hidden";
@@ -1145,15 +1145,15 @@ Controller.prototype.keydown = function(e)
         {
             document.getElementById("resume").style.visibility = "visible";
         }
-        
-        pause = !pause;            
+
+        pause = !pause;
         geo = geometry.arena;
         geo.texture = gl.createTexture();
         if(!pause)
             image = document.getElementById("arenaTexture");
         else
             image = document.getElementById("arenaTexturePause");
-        configureTexture(geo.texture, image); 
+        configureTexture(geo.texture, image);
     }
 }
 
