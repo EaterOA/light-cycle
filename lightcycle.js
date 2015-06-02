@@ -657,18 +657,69 @@ function CpuBike(id, face, pos, dir)
 
 CpuBike.prototype.update = function(world)
 {
+    var CPU_TURNRATE = 25; //cpu has 1 in CPU_TURNRATE chance of turning
     var pika = 10;
     var dist = world.elapsed * this.spd;
     var wdist = this.nearestWalls();
     var cdist = wdist[this.dir];
     var rcdist = wdist[(this.dir + 1) % 4];
     var lcdist = wdist[(this.dir + 3) % 4];
-    if (cdist - dist <= pika) {
+    if (cdist - dist <= pika)
+    {
         //console.log(this.dir, lcdist, cdist, rcdist);
-        if (rcdist > lcdist)
-            this.turn(true);
+        if (rcdist - dist > pika && lcdist - dist > pika)
+        {
+            var r = randint(0, 10);
+            if (rcdist > lcdist)
+            {
+                if (r < 7) this.turn(true);
+                else this.turn(false);
+            }
+            else
+            {
+                if (r < 7) this.turn(false);
+                else this.turn(true);
+            }
+        }
         else
-            this.turn(false);
+        {
+            if (rcdist - dist > pika)
+                this.turn(true);
+            else if (lcdist - dist > pika)
+                this.turn(false);
+            else
+            {
+                if (cdist > lcdist)
+                {
+                    if (rcdist > cdist) this.turn(true);
+                }
+                else if (lcdist > rcdist)
+                    this.turn(false);
+                else
+                    this.turn(true);
+            }
+        }
+    }
+    else
+    {
+        var r = randint(0, CPU_TURNRATE);
+        if (r == 0)
+        {
+            if (rcdist > pika && lcdist > pika)
+            {
+                if (randint(0, 2) == 0)
+                    this.turn(true);
+                else
+                    this.turn(false);
+            }
+            else
+            {
+                if (rcdist > pika)
+                    this.turn(true);
+                else
+                    this.turn(false);
+            }
+        }
     }
     Bike.prototype.update.call(this, world);
 }
