@@ -214,22 +214,22 @@ Camera.prototype.update = function()
                 this.position[1] += 100 * world.elapsed;
             if (controller.pressing[40]) // down
                 this.position[1] += -100 * world.elapsed;
-            if (controller.pressing[87]) { // w
+            if (controller.pressing[73]) { // w
                 var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
                 stretch(100 * world.elapsed, dir);
                 this.position = add(this.position, dir.slice(0,3));
             }
-            if (controller.pressing[65]) { // a
+            if (controller.pressing[74]) { // a
                 var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
                 stretch(100 * world.elapsed, dir);
                 this.position = add(this.position, dir.slice(0,3));
             }
-            if (controller.pressing[83]) { // s
+            if (controller.pressing[75]) { // s
                 var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
                 stretch(100 * world.elapsed, dir);
                 this.position = add(this.position, dir.slice(0,3));
             }
-            if (controller.pressing[68]) { // d
+            if (controller.pressing[76]) { // d
                 var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
                 stretch(100 * world.elapsed, dir);
                 this.position = add(this.position, dir.slice(0,3));
@@ -657,7 +657,7 @@ function CpuBike(id, face, pos, dir)
 
 CpuBike.prototype.update = function(world)
 {
-    var CPU_TURNRATE = 25; //cpu has 1 in CPU_TURNRATE chance of turning
+    var CPU_TURNRATE = 100; //cpu has 1 in CPU_TURNRATE chance of turning
     var pika = 10;
     var dist = world.elapsed * this.spd;
     var wdist = this.nearestWalls();
