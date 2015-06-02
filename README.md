@@ -43,12 +43,10 @@ In free-camera mode, the controls are as follows:
 
 * J - strafe left
 * L - strafe right
-
 * I - move forward
 * K - move backward
 * Up arrow - move upwards
 * Down arrow - move downwards
-
 * Left arrow - rotate left
 * Right arrow - rotate right
 * Z - rotate upwards
@@ -57,9 +55,12 @@ In free-camera mode, the controls are as follows:
 =======================
 ## Miscellaneous Controls:
 
-P - pauses/unpauses the game. No movement or camera control is allowed 
+P / Spacebar - pauses/unpauses the game. No movement or camera control is allowed 
     while the game is paused and the screen darkens to indicate this.
 
+The game starts off paused, which can be unpaused using this key.
+    
+    
 =======================
 ## Details:
 
