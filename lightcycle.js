@@ -110,6 +110,7 @@ Camera.prototype.update = function()
     // Player perspective mode
     if (this.mode == 1 && p) {
 
+        // Hacky face-transition stuff
         if (typeof(this.bikePrevFace) != "undefined" && this.bikePrevFace != p.face) {
             var prevTrueAngle = 270 - this.bikePrevDir * 90;
             var offset = angleDiff(prevTrueAngle, this.rotation[1]);
@@ -124,19 +125,12 @@ Camera.prototype.update = function()
             this.prevPos = this.position;
         }
         this.bikePrevFace = p.face;
-
         if (this.transitioning) {
             this.transitionSpd -= 1.7 * world.elapsed;
             this.transitionNum += this.transitionSpd * world.elapsed;
             if (this.transitionNum >= 1)
                 this.transitioning = false;
         }
-
-        // Attached rotation
-        if (controller.pressing[37] && !pause) // left
-            this.rotation[1] += 210 * world.elapsed;
-        if (controller.pressing[39] && !pause) // right
-            this.rotation[1] -= 210 * world.elapsed;
 
         // State adjustments based on player actions
         var bikeTurned = this.bikePrevDir != p.dir && this.bikePrevFace == p.face;
@@ -147,7 +141,11 @@ Camera.prototype.update = function()
         if (rotating)
             this.fullOffset = false;
 
-        // Adjust direction
+        // Adjust Y rotation
+        if (controller.pressing[37] && !pause) // left
+            this.rotation[1] += 210 * world.elapsed;
+        if (controller.pressing[39] && !pause) // right
+            this.rotation[1] -= 210 * world.elapsed;
         var maxOffset = this.fullOffset ? 12 : 35;
         var snapMult = rotating ? 1.2 : 1.5;
         var curAngle = this.rotation[1];
@@ -163,6 +161,20 @@ Camera.prototype.update = function()
             curAngle += rotateSpd * world.elapsed;
             this.rotation[1] = normalizeAngle(curAngle);
         }
+
+        // Adjust X rotation
+        if (controller.pressing[38]) //up
+            this.rotation[0] += 150 * world.elapsed;
+        var snapMult = 1.6;
+        var curAngle = this.rotation[0];
+        var trueAngle = -10;
+        var diff = angleDiff(curAngle, trueAngle)
+        var sign = (diff >= 0 ? 1.0 : -1.0);
+        var rotateSpd = sign * Math.min(150, Math.pow(Math.abs(diff), snapMult));
+        var rotateAmt = rotateSpd * world.elapsed;
+        this.rotation[0] = normalizeAngle(curAngle + rotateAmt);
+
+        // Convert rotation angles into direction+up vectors
         var m = identity();
         m = mult(m, rotate(this.rotation[1], [0, 1, 0]));
         m = mult(m, rotate(this.rotation[0], [1, 0, 0]));
@@ -174,10 +186,12 @@ Camera.prototype.update = function()
         var offset = transform(rotate(this.rotation[1], [0, 1, 0]), anchor);
         this.position = add(p.position, offset);
 
+        // Transform the camera vectors based on cube face
         this.position = transform(geometry.cubeRotate[p.face], this.position);
         this.dir = transform(geometry.cubeORotate[p.face], this.dir);
         this.up = transform(geometry.cubeORotate[p.face], this.up);
 
+        // Hacky face-transition stuff
         if (this.transitioning) {
             this.position = mix(this.prevPos, this.position, this.transitionNum);
             this.dir = mix(normalize(this.prevDir), normalize(this.dir), this.transitionNum);
