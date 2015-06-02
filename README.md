@@ -1,8 +1,9 @@
 Light Cycle
 
-* Vincent Wong
-* William Lai
-* Eric Du
+=======
+Vincent Wong 
+William Lai 
+Eric Du
 
 ===
 
@@ -59,3 +60,29 @@ P - pauses/unpauses the game. No movement or camera control is allowed
     while the game is paused and the screen darkens to indicate this.
 
 =======================
+Details:
+
+There are two main aspects of the world: the arena and the camera. The
+arena is a 1000x1000x1000 cube which stores all of the bikes and walls.
+The camera follows the player for the most part unless it is detached
+into free mode.
+
+Bikes are first initialized individually by the world, which adds it into
+its array of objects. Every bike is also associated with its own wall, 
+uniquely identified by its bike. As the bike changes direction, it detaches
+the current wall, pushes it into the list of world objects, and creates a 
+new one to grow.
+
+Each bike and wall has its own color, consisting of lighting as well. The
+arena's walls and floor consist of a repeated texture. When the game is
+paused, both the lighting and texture are darkened.
+
+To create the bike image, we used the image loader found at 
+https://github.com/frenchtoast747/webgl-obj-loader. It processes an image
+in .obj file form and generates the vertices that creates it.
+
+Collision detection is done through the nearestWalls function, which checks
+all walls to see if a bike is between the two endpoints of any of them.
+If so, it is considered a collision, and the bike and its walls are 
+subsequently removed from the arena.
+
