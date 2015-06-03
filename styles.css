@@ -23,3 +23,12 @@ canvas {
     margin-left: -250px;
     visibility: hidden;
 }
+
+#start {
+    position: absolute;
+    left: 50%;
+    top: 5%;
+    margin-left: -350px;
+    visibility: hidden;
+}
+

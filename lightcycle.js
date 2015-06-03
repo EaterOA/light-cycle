@@ -7,8 +7,11 @@ var world;
 var geometry;
 var camera;
 var controller;
+var paused = false;
+var started = false;
 
-var pause = false;
+// Presets
+var arenaSize = [500, 500, 500];
 
 window.onload = function init()
 {
@@ -40,16 +43,6 @@ window.onload = function init()
     // Create controller handler
     controller = new Controller();
 
-    // Create camera object
-    camera = new Camera(aspect);
-
-    // Create game world / logic controller
-    world = new World();
-    world.addBike(PcBike);
-    world.player = world.bikes[0];
-    for (var i = 0; i < 15; i++)
-        world.addBike(CpuBike);
-
     // Create the geometry used in World objects
     initializeGeometry();
 
@@ -58,11 +51,38 @@ window.onload = function init()
     setUniform(gl.uniform1i, "texture", 0);
     setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(geometry.light.position)));
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    world.time = window.performance.now() / 1000;
 
     // Start game
-    controller.pause(true);
+    restart()
     requestAnimFrame(render);
+}
+
+function restart()
+{
+    // Create game world / logic controller
+    if (world) {
+        removeEventListener("keydown", world.player.controls);
+        delete world;
+    }
+        
+    world = new World();
+    world.addBike(PcBike);
+    world.player = world.bikes[0];
+    for (var i = 0; i < 15; i++)
+        world.addBike(CpuBike);
+    world.time = window.performance.now() / 1000;
+
+    // Create camera object
+    if (camera) {
+        removeEventListener("keydown", camera.controls);
+        delete camera;
+    }
+    camera = new Camera(aspect);
+    
+    // Start out game paused
+    controller.pause(false);
+    started = false;
+    controller.pause(true);
 }
 
 function Camera(aspect)
@@ -75,29 +95,32 @@ function Camera(aspect)
     this.up = [0, 1, 0];
     this.mode = 1;
 
-    addEventListener("keydown", function(e) {
-        var nextMode = -1;
-
-        if(!pause)
-        {
-            if (e.keyCode == 48) // 0
-                nextMode = 0;
-            else if (e.keyCode == 49) // 1
-                nextMode = 1
-            else if (e.keyCode == 50) // 2
-                nextMode = 2;
-
-            if (nextMode == -1)
-                return;
-            if (nextMode == this.mode) {
-                this.mode = 1;
-            }
-            else {
-                this.mode = nextMode;
-            }
-        }
-    }.bind(this));
+    this.controls = this.controls.bind(this);
+    addEventListener("keydown", this.controls);
 }
+
+Camera.prototype.controls = function(e)
+{
+    var nextMode = -1;
+
+    if(!paused)
+    {
+        if (e.keyCode == 48) // 0
+            nextMode = 0;
+        else if (e.keyCode == 49) // 1
+            nextMode = 1
+
+        if (nextMode == -1)
+            return;
+        if (nextMode == this.mode) {
+            this.mode = 1;
+        }
+        else {
+            this.mode = nextMode;
+        }
+    }
+}
+
 
 Camera.prototype.update = function()
 {
@@ -138,9 +161,9 @@ Camera.prototype.update = function()
             this.fullOffset = false;
 
         // Adjust Y rotation
-        if (controller.pressing[37] && !pause) // left
+        if (controller.pressing[37] && !paused) // left
             this.rotation[1] += 210 * world.elapsed;
-        if (controller.pressing[39] && !pause) // right
+        if (controller.pressing[39] && !paused) // right
             this.rotation[1] -= 210 * world.elapsed;
         var maxOffset = this.fullOffset ? 12 : 35;
         var snapMult = rotating ? 1.2 : 1.5;
@@ -200,7 +223,7 @@ Camera.prototype.update = function()
 
     // Free camera mode
     else {
-        if(!pause)
+        if(!paused)
         {
             if (controller.pressing[37]) // left
                 this.rotation[1] += 120 * world.elapsed;
@@ -273,7 +296,7 @@ function World()
     var arena = {};
     arena.type = "arena";
     arena.position = [0, 0, 0];
-    arena.size = [500, 500, 500];
+    arena.size = arenaSize;
     this.objects.push(arena);
 
     this.arena = arena;
@@ -286,7 +309,7 @@ World.prototype.update = function(time)
     this.elapsed = time - this.time;
     this.time = time;
 
-    if(!pause)
+    if(!paused)
     {
         for (var i = 0; i < this.objects.length; i++) {
             var obj = this.objects[i];
@@ -561,30 +584,33 @@ function PcBike(id, face, pos, dir)
 {
     Bike.call(this, id, face, pos, dir);
 
-    addEventListener("keydown", function(e) {
+    this.controls = this.controls.bind(this);
+    addEventListener("keydown", this.controls);
+}
 
-        if(!pause)
-        {
-            if (e.keyCode == 87) { // w
-                if(this.spd == 50)
-                    this.spd = 100;
-                else
-                    this.spd = 200;
-            }
-            else if (e.keyCode == 65) { // a
-                this.turn(false);
-            }
-            else if (e.keyCode == 83) { // s
-                if(this.spd == 200)
-                    this.spd = 100;
-                else
-                    this.spd = 50;
-            }
-            else if (e.keyCode == 68) { // d
-                this.turn(true);
-            }
+PcBike.prototype.controls = function(e)
+{
+    if(!paused)
+    {
+        if (e.keyCode == 87) { // w
+            if(this.spd == 50)
+                this.spd = 100;
+            else
+                this.spd = 200;
         }
-    }.bind(this));
+        else if (e.keyCode == 65) { // a
+            this.turn(false);
+        }
+        else if (e.keyCode == 83) { // s
+            if(this.spd == 200)
+                this.spd = 100;
+            else
+                this.spd = 50;
+        }
+        else if (e.keyCode == 68) { // d
+            this.turn(true);
+        }
+    }
 }
 
 CpuBike.prototype = Object.create(Bike.prototype);
@@ -746,9 +772,9 @@ function initializeGeometry()
     geo = geometry.cubeRotate = [];
     for (var i = 0; i < geometry.cubeORotate.length; i++) {
         var m = identity();
-        m = mult(m, translate(stretched(0.5, world.arena.size)));
+        m = mult(m, translate(stretched(0.5, arenaSize)));
         m = mult(m, geometry.cubeORotate[i]);
-        m = mult(m, translate(stretched(-0.5, world.arena.size)));
+        m = mult(m, translate(stretched(-0.5, arenaSize)));
         geo.push(m);
     }
 
@@ -877,7 +903,7 @@ function initializeGeometry()
             res.diffuse = [0.1, 0.13, 0.1];
         }
 
-        if(pause)
+        if(paused)
         {
             for(var i = 0; i < 3; i++)
             {
@@ -914,7 +940,6 @@ function initializeGeometry()
         res.specular = [0,0,0,0];
         return res;
     }
-    var w = world.arena.size;
     geo.generateModel = function(obj) {
         var v = subtract(obj.end, obj.start);
         var size = [0.1, 1.5 * obj.life, length(v)];
@@ -1125,22 +1150,31 @@ function Controller()
 
 Controller.prototype.pause = function(p)
 {
-    if (pause == p)
+    if (paused == p)
         return;
 
-    if(pause)
+    if(paused)
     {
-        document.getElementById("resume").style.visibility = "hidden";
+        if (started)
+            document.getElementById("resume").style.visibility = "hidden";
+        else {
+            document.getElementById("start").style.visibility = "hidden";
+            started = true;
+        }
     }
     else
     {
-        document.getElementById("resume").style.visibility = "visible";
+        if (started)
+            document.getElementById("resume").style.visibility = "visible";
+        else {
+            document.getElementById("start").style.visibility = "visible";
+        }
     }
 
-    pause = !pause;
+    paused = !paused;
     geo = geometry.arena;
     geo.texture = gl.createTexture();
-    if(!pause)
+    if(!paused)
         image = document.getElementById("arenaTexture");
     else
         image = document.getElementById("arenaTexturePause");
@@ -1151,7 +1185,10 @@ Controller.prototype.keydown = function(e)
 {
     this.pressing[e.keyCode] = true;
     if (e.keyCode == 80 || e.keyCode == 32) { // p | space
-        this.pause(!pause);
+        this.pause(!paused);
+    }
+    else if (e.keyCode == 82) { // r
+        restart();
     }
 }
 
