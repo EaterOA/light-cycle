@@ -12,6 +12,7 @@ var started = false;
 
 // Presets
 var arenaSize = [500, 500, 500];
+var lightPos = [250, 250, 250];
 
 window.onload = function init()
 {
@@ -49,7 +50,7 @@ window.onload = function init()
     // Other set up
     toggleAttrib("vPosition", true);
     setUniform(gl.uniform1i, "texture", 0);
-    setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(geometry.light.position)));
+    setUniform(gl.uniform4fv, "lightPosition", flatten(vec4(lightPos)));
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     // Start game
@@ -173,7 +174,7 @@ Camera.prototype.update = function()
             if (Math.abs(diff2) < Math.abs(diff))
                 diff = diff2;
             var sign = (diff >= 0 ? 1.0 : -1.0);
-            var rotateSpd = sign * Math.pow(Math.abs(diff), snapMult);
+            var rotateSpd = sign * Math.min(210, Math.pow(Math.abs(diff), snapMult));
             curAngle += rotateSpd * world.elapsed;
             this.rotation[1] = normalizeAngle(curAngle);
         }
@@ -773,9 +774,6 @@ function initializeGeometry()
         geo.push(m);
     }
 
-    geo = geometry.light = {};
-    geo.position = [250, 250, 250];
-
     geo = geometry.arena = {};
     geo.shape = makeCube(50);
     geo.vertexBuffer = gl.createBuffer();
@@ -793,7 +791,7 @@ function initializeGeometry()
     }
     geo.colorBuffer = gl.createBuffer();
     geo.transparent = false;
-    geo.colorScale = false;
+    geo.coloring = false;
     geo.update = function(world, obj) {
         var trans = [];
         var cpos = camera.position;
@@ -946,6 +944,34 @@ function initializeGeometry()
         model = mult(model, scale(size));
         return model;
     }
+    geo.isVisible = function(obj) {
+        if (obj.face == camera.face + 3 || camera.face == obj.face + 3)
+            return false;
+        var u = camera.dir;
+        var sv = transform(geometry.cubeRotate[obj.face], obj.start);
+        var sa = angleBetween(u, subtract(sv, camera.position)).angle;
+        if (Math.abs(sa) < 50)
+            return true;
+        var ev = transform(geometry.cubeRotate[obj.face], obj.end);
+        var ea = angleBetween(u, subtract(ev, camera.position)).angle;
+        if (Math.abs(ea) < 50)
+            return true;
+        var v = subtract(ev, sv);
+        var w0 = subtract(camera.position, sv)
+        var a = dot(u, u);
+        var b = dot(u, v);
+        var c = dot(v, v);
+        var d = dot(u, w0);
+        var e = dot(v, w0);
+        var tc = (a*e - b*d) / (a*c - b*b);
+        if (tc > 0 && tc < 1) {
+            var cv = add(sv, stretched(tc, v));
+            var ca = angleBetween(camera.dir, subtract(cv, camera.position)).angle;
+            if (Math.abs(ca) < 50)
+                return true;
+        }
+        return false;
+    }
 }
 
 function configureTexture(texture, image)
@@ -991,6 +1017,10 @@ function render(time)
 
         // Don't draw dead objects
         if (obj.dead)
+            continue;
+        
+        // Cull
+        if (typeof(geo.isVisible) == "function" && !geo.isVisible(obj))
             continue;
 
         // Perform full update on geometry (hopefully rare)
