@@ -103,21 +103,18 @@ Camera.prototype.controls = function(e)
 {
     var nextMode = -1;
 
-    if(!paused)
-    {
-        if (e.keyCode == 48) // 0
-            nextMode = 0;
-        else if (e.keyCode == 49) // 1
-            nextMode = 1
+    if (e.keyCode == 48) // 0
+        nextMode = 0;
+    else if (e.keyCode == 49) // 1
+        nextMode = 1
 
-        if (nextMode == -1)
-            return;
-        if (nextMode == this.mode) {
-            this.mode = 1;
-        }
-        else {
-            this.mode = nextMode;
-        }
+    if (nextMode == -1)
+        return;
+    if (nextMode == this.mode) {
+        this.mode = 1;
+    }
+    else {
+        this.mode = nextMode;
     }
 }
 
@@ -161,9 +158,9 @@ Camera.prototype.update = function()
             this.fullOffset = false;
 
         // Adjust Y rotation
-        if (controller.pressing[37] && !paused) // left
+        if (controller.pressing[37]) // left
             this.rotation[1] += 210 * world.elapsed;
-        if (controller.pressing[39] && !paused) // right
+        if (controller.pressing[39]) // right
             this.rotation[1] -= 210 * world.elapsed;
         var maxOffset = this.fullOffset ? 12 : 35;
         var snapMult = rotating ? 1.2 : 1.5;
@@ -223,41 +220,39 @@ Camera.prototype.update = function()
 
     // Free camera mode
     else {
-        if(!paused)
-        {
-            if (controller.pressing[37]) // left
-                this.rotation[1] += 120 * world.elapsed;
-            if (controller.pressing[39]) // right
-                this.rotation[1] += -120 * world.elapsed;
-            if (controller.pressing[38]) // up
-                this.position[1] += 100 * world.elapsed;
-            if (controller.pressing[40]) // down
-                this.position[1] += -100 * world.elapsed;
-            if (controller.pressing[73]) { // w
-                var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
-                stretch(100 * world.elapsed, dir);
-                this.position = add(this.position, dir.slice(0,3));
-            }
-            if (controller.pressing[74]) { // a
-                var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
-                stretch(100 * world.elapsed, dir);
-                this.position = add(this.position, dir.slice(0,3));
-            }
-            if (controller.pressing[75]) { // s
-                var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
-                stretch(100 * world.elapsed, dir);
-                this.position = add(this.position, dir.slice(0,3));
-            }
-            if (controller.pressing[76]) { // d
-                var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
-                stretch(100 * world.elapsed, dir);
-                this.position = add(this.position, dir.slice(0,3));
-            }
-            if (controller.pressing[90]) // z
-                this.rotation[0] += 50 * world.elapsed;
-            if (controller.pressing[88]) // x
-                this.rotation[0] += -50 * world.elapsed;
+        if (controller.pressing[37]) // left
+            this.rotation[1] += 120 * world.elapsed;
+        if (controller.pressing[39]) // right
+            this.rotation[1] += -120 * world.elapsed;
+        if (controller.pressing[38]) // up
+            this.position[1] += 100 * world.elapsed;
+        if (controller.pressing[40]) // down
+            this.position[1] += -100 * world.elapsed;
+        if (controller.pressing[73]) { // w
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
         }
+        if (controller.pressing[74]) { // a
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[75]) { // s
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[76]) { // d
+            var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
+            stretch(100 * world.elapsed, dir);
+            this.position = add(this.position, dir.slice(0,3));
+        }
+        if (controller.pressing[90]) // z
+            this.rotation[0] += 50 * world.elapsed;
+        if (controller.pressing[88]) // x
+            this.rotation[0] += -50 * world.elapsed;
+
         var m = identity();
         m = mult(m, rotate(this.rotation[1], [0, 1, 0]));
         m = mult(m, rotate(this.rotation[0], [1, 0, 0]));
