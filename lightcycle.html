@@ -22,14 +22,15 @@ uniform bool useColoring;
 varying vec2 fTexCoord;
 varying vec3 N, V, L, H;
 varying vec4 fColor;
-varying vec3 fPos;
+varying vec3 fModelPos;
+varying vec3 fWorldPos;
 
 void main()
 {
     gl_Position = vProjection * vView * vModel * vPosition;
 
-    fPos = (vModel * vPosition).xyz;
-    fPos.y = vPosition.y;
+    fWorldPos = (vModel * vPosition).xyz;
+    fModelPos = vPosition.xyz;
     if (useLighting) {
         // Convert base coordinates into world space
         vec3 worldPosition = (vView * vModel * vPosition).xyz;
@@ -57,7 +58,8 @@ precision mediump float;
 varying vec2 fTexCoord;
 varying vec3 N, V, L, H;
 varying vec4 fColor;
-varying vec3 fPos;
+varying vec3 fModelPos;
+varying vec3 fWorldPos;
 
 uniform sampler2D texture;
 uniform bool useTexture;
@@ -174,10 +176,9 @@ void main()
 
     // Special sauce for wall
     if (isWall) {
-        vec3 pos = fPos;
-        pos.y *= 5.0;
-        color *= 0.85 + 0.4 * surface3(pos * 0.015);
-        if (pos.y > 4.2) color += color * 0.6 * ((pos.y-4.2));
+        color *= 0.85 + 0.4 * surface3(fWorldPos * 0.025);
+        if (fModelPos.y > 0.85)
+            color += color * 3.0 * (fModelPos.y-0.85);
     }
 
     color.a = 1.0;
