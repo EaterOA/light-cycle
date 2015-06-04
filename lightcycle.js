@@ -54,8 +54,24 @@ window.onload = function init()
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     // Start game
-    restart()
+    restart();
+    initializeBgm();
     requestAnimFrame(render);
+}
+
+function initializeBgm()
+{
+    var bgm = document.getElementById('bgm');
+    bgm.volume = 0.5;
+    bgm.loop = true;
+}
+
+function playCrashSound()
+{
+    var sound = document.getElementById('collision-sound');
+    sound.pause();
+    sound.currentTime = 0;
+    sound.play();
 }
 
 function restart()
@@ -384,6 +400,7 @@ Bike.prototype.update = function(world)
     if (wdist[this.dir] < dist) {
         dist = wdist[this.dir];
         this.dead = true;
+        playCrashSound();
         this.removeWalls();
     }
 
@@ -1188,6 +1205,7 @@ function toggleAttrib(key, enable)
 function Controller()
 {
     this.pressing = {};
+    this.bgm = document.getElementById('bgm');
     addEventListener("keydown", this.keydown.bind(this));
     addEventListener("keyup", this.keyup.bind(this));
 }
@@ -1199,17 +1217,22 @@ Controller.prototype.pause = function(p)
 
     if(paused)
     {
-        if (started)
+        if (started) {
             document.getElementById("resume").style.visibility = "hidden";
+            this.bgm.play();        
+        }
         else {
             document.getElementById("start").style.visibility = "hidden";
             started = true;
+            this.bgm.play();
         }
     }
     else
     {
-        if (started)
+        if (started) {
             document.getElementById("resume").style.visibility = "visible";
+            this.bgm.pause();
+        }
         else {
             document.getElementById("start").style.visibility = "visible";
         }
