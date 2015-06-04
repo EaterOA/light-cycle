@@ -168,7 +168,7 @@ Camera.prototype.update = function()
         if (this.transitioning) {
             this.transitionSpd -= 1.7 * world.elapsed;
             this.transitionNum += this.transitionSpd * world.elapsed;
-            if (this.transitionNum >= 1)
+            if (this.transitionNum >= 1 || this.transitionSpd <= 0)
                 this.transitioning = false;
         }
 
