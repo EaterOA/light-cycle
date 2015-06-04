@@ -927,6 +927,21 @@ function initializeGeometry()
     gl.bindBuffer(gl.ARRAY_BUFFER, geo.normalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(shape.normals), gl.STATIC_DRAW);
     geo.numVertices = shape.vertices.length;
+    geo.update = function(world, obj) {
+        var c = obj.geocache;
+        if (!c)
+            c = obj.geocache = {}
+        if (!c.rstart)
+            c.rstart = transform(geometry.cubeRotate[obj.face], obj.start);
+        if (!c.model) {
+            for (var i = 0; i < world.bikes.length; i++)
+                if (obj == world.bikes[i].currentWall)
+                    return false;
+            c.model = this.generateModel(obj);
+            c.rend = transform(geometry.cubeRotate[obj.face], obj.end);
+        }
+        return false;
+    }
     geo.lighting = function (obj) {
         var res = geometry.bike.lighting(obj);
         stretch(2.2, res.ambient);
@@ -934,6 +949,8 @@ function initializeGeometry()
         return res;
     }
     geo.generateModel = function(obj) {
+        if (!obj.dying && obj.geocache.model)
+            return obj.geocache.model;
         var v = subtract(obj.end, obj.start);
         var size = [0.1, 1.5 * obj.life, length(v)];
         var angle = angleBetweenY([0, 0, 1], v);
@@ -948,11 +965,13 @@ function initializeGeometry()
         if (obj.face == camera.face + 3 || camera.face == obj.face + 3)
             return false;
         var u = camera.dir;
-        var sv = transform(geometry.cubeRotate[obj.face], obj.start);
+        var sv = obj.geocache.rstart;
         var sa = angleBetween(u, subtract(sv, camera.position)).angle;
         if (Math.abs(sa) < 50)
             return true;
-        var ev = transform(geometry.cubeRotate[obj.face], obj.end);
+        var ev = obj.geocache.rend;
+        if (!ev)
+            ev = transform(geometry.cubeRotate[obj.face], obj.end);
         var ea = angleBetween(u, subtract(ev, camera.position)).angle;
         if (Math.abs(ea) < 50)
             return true;
@@ -1019,13 +1038,13 @@ function render(time)
         if (obj.dead)
             continue;
         
-        // Cull
-        if (typeof(geo.isVisible) == "function" && !geo.isVisible(obj))
-            continue;
-
         // Perform full update on geometry (hopefully rare)
         if (geo.update && geo.update(world, obj))
             prevGeo = null;
+
+        // Cull
+        if (typeof(geo.isVisible) == "function" && !geo.isVisible(obj))
+            continue;
 
         // Special sauce for wall
         if (prevGeo !== geo) {
