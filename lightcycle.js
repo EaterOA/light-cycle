@@ -9,6 +9,8 @@ var camera;
 var controller;
 var paused = false;
 var started = false;
+var won = false;
+var wontimer = 0;
 
 // Presets
 var arenaSize = [500, 500, 500];
@@ -62,13 +64,15 @@ window.onload = function init()
 function initializeBgm()
 {
     var bgm = document.getElementById('bgm');
-    bgm.volume = 0.5;
+    bgm.volume = 0.1;
     bgm.loop = true;
+    bgm.play();
 }
 
 function playCrashSound()
 {
     var sound = document.getElementById('collision-sound');
+    sound.volume = 0.5;
     sound.pause();
     sound.currentTime = 0;
     sound.play();
@@ -81,7 +85,7 @@ function restart()
         removeEventListener("keydown", world.player.controls);
         delete world;
     }
-        
+
     world = new World();
     world.addBike(PcBike);
     world.player = world.bikes[0];
@@ -95,7 +99,10 @@ function restart()
         delete camera;
     }
     camera = new Camera(aspect);
-    
+
+    won = false;
+    document.getElementById("victory").style.visibility = "hidden";
+
     // Start out game paused
     controller.pause(false);
     started = false;
@@ -337,6 +344,22 @@ World.prototype.update = function(time)
                 newList.push(obj);
         }
         this.objects = newList;
+    }
+
+    if (!won) {
+        if (this.player.dead)
+            return;
+        for (var i = 1; i < this.bikes.length; i++)
+            if (!this.bikes[i].dead)
+                return;
+        won = true;
+        wontimer = 5;
+        document.getElementById("victory").style.visibility = "visible";
+    }
+    else if (wontimer > 0) {
+        var opacity = Math.min(1.0, wontimer);
+        document.getElementById("victory").style.opacity = opacity;
+        wontimer -= world.elapsed;
     }
 }
 
@@ -1054,7 +1077,7 @@ function render(time)
         // Don't draw dead objects
         if (obj.dead)
             continue;
-        
+
         // Perform full update on geometry (hopefully rare)
         if (geo.update && geo.update(world, obj))
             prevGeo = null;
@@ -1219,7 +1242,7 @@ Controller.prototype.pause = function(p)
     {
         if (started) {
             document.getElementById("resume").style.visibility = "hidden";
-            this.bgm.play();        
+            this.bgm.play();
         }
         else {
             document.getElementById("start").style.visibility = "hidden";

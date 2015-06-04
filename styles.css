@@ -32,3 +32,12 @@ canvas {
     visibility: hidden;
 }
 
+#victory {
+    position: absolute;
+    left: 50%;
+    top: 40%;
+    margin-left: -320px;
+    margin-top: -100px;
+    visibility: hidden;
+}
+
