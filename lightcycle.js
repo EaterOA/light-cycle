@@ -629,19 +629,15 @@ PcBike.prototype.controls = function(e)
     if(!paused)
     {
         if (e.keyCode == 87) { // w
-            if(this.spd == 50)
-                this.spd = 100;
-            else
-                this.spd = 200;
+            if (this.spd == 100)
+                this.spd = 150;
         }
         else if (e.keyCode == 65) { // a
             this.turn(false);
         }
         else if (e.keyCode == 83) { // s
-            if(this.spd == 200)
+            if(this.spd == 150)
                 this.spd = 100;
-            else
-                this.spd = 50;
         }
         else if (e.keyCode == 68) { // d
             this.turn(true);
@@ -1228,6 +1224,7 @@ function toggleAttrib(key, enable)
 function Controller()
 {
     this.pressing = {};
+    this.disable_bgm = false;
     this.bgm = document.getElementById('bgm');
     addEventListener("keydown", this.keydown.bind(this));
     addEventListener("keyup", this.keyup.bind(this));
@@ -1242,12 +1239,14 @@ Controller.prototype.pause = function(p)
     {
         if (started) {
             document.getElementById("resume").style.visibility = "hidden";
-            this.bgm.play();
+            if (!this.disable_bgm)
+                this.bgm.play();
         }
         else {
             document.getElementById("start").style.visibility = "hidden";
             started = true;
-            this.bgm.play();
+            if (!this.disable_bgm)
+                this.bgm.play();
         }
     }
     else
@@ -1279,6 +1278,13 @@ Controller.prototype.keydown = function(e)
     }
     else if (e.keyCode == 82) { // r
         restart();
+    }
+    else if (e.keyCode == 77) { // m
+        this.disable_bgm = !this.disable_bgm;
+        if (this.disable_bgm)
+            this.bgm.pause();
+        else if (!paused)
+            this.bgm.play();
     }
 }
 
