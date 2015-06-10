@@ -11,7 +11,7 @@ Any collision with a wall removes the bike and its corresponding walls
 from the arena. The bike is free to move along the arena cube as long
 as it doesn't collide with a wall.
 
-To start the game, run the lightcycle.html file in a web browser. It should
+To start the game, run the index.html file in a web browser. It should
 open up the game in the window and begin moving the bike. The game gives
 control of the blue bike with a number of controls.
 
