@@ -64,18 +64,22 @@ window.onload = function init()
 function initializeBgm()
 {
     var bgm = document.getElementById('bgm');
-    bgm.volume = 0.1;
-    bgm.loop = true;
-    bgm.play();
+    if (!bgm.error) {
+        bgm.volume = 0.1;
+        bgm.loop = true;
+        bgm.play();
+    }
 }
 
 function playCrashSound()
 {
     var sound = document.getElementById('collision-sound');
-    sound.volume = 0.5;
-    sound.pause();
-    sound.currentTime = 0;
-    sound.play();
+    if (!sound.error) {
+        sound.volume = 0.5;
+        sound.pause();
+        sound.currentTime = 0;
+        sound.play();
+    }
 }
 
 function restart()
@@ -1239,13 +1243,13 @@ Controller.prototype.pause = function(p)
     {
         if (started) {
             document.getElementById("resume").style.visibility = "hidden";
-            if (!this.disable_bgm)
+            if (!this.disable_bgm && !this.bgm.error)
                 this.bgm.play();
         }
         else {
             document.getElementById("start").style.visibility = "hidden";
             started = true;
-            if (!this.disable_bgm)
+            if (!this.disable_bgm && !this.bgm.error)
                 this.bgm.play();
         }
     }
@@ -1253,7 +1257,8 @@ Controller.prototype.pause = function(p)
     {
         if (started) {
             document.getElementById("resume").style.visibility = "visible";
-            this.bgm.pause();
+            if (!this.bgm.error)
+                this.bgm.pause();
         }
         else {
             document.getElementById("start").style.visibility = "visible";
@@ -1280,6 +1285,8 @@ Controller.prototype.keydown = function(e)
         restart();
     }
     else if (e.keyCode == 77) { // m
+        if (this.bgm.error)
+            return
         this.disable_bgm = !this.disable_bgm;
         if (this.disable_bgm)
             this.bgm.pause();
