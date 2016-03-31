@@ -1,23 +1,22 @@
+'use strict';
+
 // ------------- utilities --------------
 
 // For backwards compatibility
-if(!Object.create)
-{
-    Object.create=function(o){
-        function F(){}
-        F.prototype=o;
+if(!Object.create) {
+    Object.prototype.create = function(o) {
+        function F() {};
+        F.prototype = o;
         return new F();
     }
 }
 
 // Returns a random float between low and high
-function rand(low, high)
-{
+function rand(low, high) {
     return Math.random() * (high-low) + low;
 }
 
-function randint(low, high)
-{
+function randint(low, high) {
     return Math.floor(rand(low, high));
 }
 
@@ -25,16 +24,14 @@ function randint(low, high)
 // ------------- geometry -------------
 
 // Converts radians to degrees
-function degrees(r)
-{
+function degrees(r) {
     return r * 180.0 / Math.PI;
 }
 
 // Applies mat to vec
-function transform(mat, vec)
-{
+function transform(mat, vec) {
     var v3 = false;
-    if (vec.length == 3) {
+    if (vec.length === 3) {
         vec = vec4(vec);
         v3 = true;
     }
@@ -42,27 +39,27 @@ function transform(mat, vec)
     var res = [];
     for (var i = 0; i < mat.length; i++) {
         var sum = 0.0;
-        for (var j = 0; j < vec.length; j++)
+        for (var j = 0; j < vec.length; j++) {
             sum += mat[i][j] * vec[j];
+        }
         res.push(sum);
     }
     return v3 ? res.slice(0,3) : res;
 }
 
 // Bounds the angle to [0, 360) degrees
-function normalizeAngle(a)
-{
+function normalizeAngle(a) {
     a %= 360;
-    if (a < 0)
+    if (a < 0) {
         a += 360;
+    }
     return a;
 }
 
 // Finds the difference from angle a to angle b
 // The difference is between -180 and 180 degrees, denoting the smallest amount
 // to increment 'a' by to get to 'b'.
-function angleDiff(a, b)
-{
+function angleDiff(a, b) {
     a = normalizeAngle(a);
     b = normalizeAngle(b);
     var diff = b - a;
@@ -78,14 +75,16 @@ function angleDiff(a, b)
 //   - vertices: vertex coordinates
 //   - texCoords: texture coordinates
 //   - normals: normal vectors for each vertex
-function makeQuad(zoom)
-{
-    if (typeof(zoom) == 'undefined')
+function makeQuad(zoom) {
+    if (zoom === undefined) {
         zoom = 1;
+    }
 
-    var r = {"vertices": [],
-             "texCoords": [],
-             "normals": []};
+    var r = {
+        "vertices": [],
+        "texCoords": [],
+        "normals": []
+    };
 
     var texCorners = [
         vec2(0, 0),
@@ -99,7 +98,7 @@ function makeQuad(zoom)
         vec4(1, 0, 1),
         vec4(0, 0, 1),
     ];
-    idx = [1, 0, 3, 3, 2, 1];
+    var idx = [1, 0, 3, 3, 2, 1];
     var n = normal(corners[idx[0]], corners[idx[1]], corners[idx[2]]);
     for (var i = 0; i < idx.length; i++) {
         r.vertices.push(corners[idx[i]]);
@@ -118,12 +117,15 @@ function makeQuad(zoom)
 //   - normals: normal vectors for each vertex
 function makeCube(zoom)
 {
-    if (typeof(zoom) == 'undefined')
+    if (zoom === undefined) {
         zoom = 1;
+    }
 
-    var r = {"vertices": [],
-             "texCoords": [],
-             "normals": []};
+    var r = {
+        "vertices": [],
+        "texCoords": [],
+        "normals": []
+    };
 
     var transforms = [
         mult(translate(1, 0, 0), rotate(180, [0, 0, 1])),
@@ -146,22 +148,20 @@ function makeCube(zoom)
 }
 
 // Computes the normal of a triangle primitive
-function normal(a, b, c)
-{
+function normal(a, b, c) {
     var v = subtract(b, a);
     var u = subtract(c, a);
     return normalize(cross(v, u));
 }
 
 // Scales the components of vector v by s
-function stretch(s, v)
-{
-    for (var i = 0; i < v.length; i++)
+function stretch(s, v) {
+    for (var i = 0; i < v.length; i++) {
         v[i] = s * v[i];
+    }
 }
 
-function stretched(s, v)
-{
+function stretched(s, v) {
     var res = v.slice();
     stretch(s, res);
     return res;
@@ -169,15 +169,13 @@ function stretched(s, v)
 
 // Finds the angle between two vectors on the XZ plane
 // Rotating v by this angle with the Y axis should yield u
-function angleBetweenY(v, u)
-{
+function angleBetweenY(v, u) {
     var dotp = dot(v, u);
     var crossp = cross(v, u);
     return degrees(Math.atan2(crossp[1], dotp));
 }
 
-function angleBetween(v, u)
-{
+function angleBetween(v, u) {
     var res = {};
     var dotp = dot(v, u);
     var crossp = cross(v, u);
@@ -189,10 +187,10 @@ function angleBetween(v, u)
 }
 
 // Applies mat to all vertices in arr
-function transformVectors(mat, arr)
-{
-    res = []
-    for (var i = 0; i < arr.length; i++)
-        res.push(transform(mat, arr[i]))
+function transformVectors(mat, arr) {
+    var res = []
+    for (var i = 0; i < arr.length; i++) {
+        res.push(transform(mat, arr[i]));
+    }
     return res;
 }
