@@ -391,10 +391,11 @@ function Bike(id, face, pos, dir) {
     this.position = pos.slice();
     this.spd = 100.0;
     this.dir = dir;
+    this.upvel = 0.0;
+    this.jumping = false;
     this.id = id;
     this.offsets = [1, 0.7];
     this.currentWall = null;
-    this.prevWall = null;
     this.pushWall();
 }
 
@@ -404,7 +405,9 @@ Bike.prototype.turn = function(right) {
     } else {
         this.dir = (this.dir + 3) % 4;
     }
-    this.pushWall();
+    if (!this.jumping) {
+        this.pushWall();
+    }
 }
 
 Bike.prototype.removeWalls = function() {
@@ -423,6 +426,18 @@ Bike.prototype.update = function(world) {
 
     if (this.dead) {
         return;
+    }
+
+    // Evaluate vertical motion
+    if (this.jumping) {
+        var gravity = -60.0;
+        this.upvel += world.elapsed * gravity;
+        this.position[1] += world.elapsed * this.upvel;
+        if (this.position[1] <= 0) {
+            this.position[1] = 0;
+            this.jumping = false;
+            this.pushWall();
+        }
     }
 
     var dist = world.elapsed * this.spd;
@@ -496,14 +511,15 @@ Bike.prototype.update = function(world) {
     if (this.dir === 2) this.position[0] -= dist;
     if (this.dir === 3) this.position[2] -= dist;
 
-    this.currentWall.extendTo(this.position);
+    if (!this.jumping) {
+        this.currentWall.extendTo(this.position);
+    }
 }
 
 Bike.prototype.pushWall = function() {
     if(!this.dead) {
         var maki = new Wall(this.position, this.position, this.face, this.dir, this.id);
         world.objects.push(maki);
-        this.prevWall = this.currentWall;
         this.currentWall = maki;
     }
 }
@@ -627,16 +643,18 @@ PcBike.prototype.constructor = PcBike;
 
 PcBike.prototype.controls = function(e) {
     if (!paused) {
-        if (e.keyCode === 87) { // w
-            if (this.spd === 100) {
-                this.spd = 150;
+        if (e.keyCode === 32) { // space
+            if (!this.jumping) {
+                this.jumping = true;
+                this.upvel = 30;
+                this.pushWall();
             }
+        } else if (e.keyCode === 87) { // w
+            this.spd = 150;
         } else if (e.keyCode === 65) { // a
             this.turn(false);
         } else if (e.keyCode === 83) { // s
-            if(this.spd === 150) {
-                this.spd = 100;
-            }
+            this.spd = 100;
         } else if (e.keyCode === 68) { // d
             this.turn(true);
         }
@@ -1214,8 +1232,7 @@ Controller.prototype.pause = function(p) {
         return;
     }
 
-    if (paused)
-    {
+    if (paused) {
         if (started) {
             document.getElementById("resume").style.visibility = "hidden";
         } else {
@@ -1249,7 +1266,7 @@ Controller.prototype.pause = function(p) {
 
 Controller.prototype.keydown = function(e) {
     this.pressing[e.keyCode] = true;
-    if (e.keyCode === 80 || e.keyCode === 32) { // p | space
+    if (e.keyCode === 80 || e.keyCode === 27 || e.keyCode == 13) { // p | esc | enter
         this.pause(!paused);
     } else if (e.keyCode === 82) { // r
         restart();
