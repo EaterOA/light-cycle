@@ -455,57 +455,69 @@ Bike.prototype.update = function(world) {
 
     var a = world.arena.size;
     if (this.dir === 0 && this.position[0] + dist > a[0]) {
-        this.currentWall.extend(a[0] - this.position[0]);
+        if (!this.jumping) {
+            this.currentWall.extend(a[0] - this.position[0]);
+        }
         dist = this.position[0] + dist - a[0];
         var st = [false, true, false, true, false, true][this.face];
         if (st) {
-            this.position = [a[2] - this.position[2], 0, 0];
+            this.position = [a[2] - this.position[2], 0, this.position[1]];
             this.dir = 1;
         } else {
-            this.position = [this.position[2], 0, a[2]];
+            this.position = [this.position[2], 0, a[2] - this.position[1]];
             this.dir = 3;
         }
         this.face = [1, 2, 3, 4, 5, 0][this.face];
         this.pushWall();
+        this.jumping = false;
     } else if (this.dir === 1 && this.position[2] + dist > a[2]) {
-        this.currentWall.extend(a[2] - this.position[2]);
+        if (!this.jumping) {
+            this.currentWall.extend(a[2] - this.position[2]);
+        }
         dist = this.position[2] + dist - a[2];
         var st = [true, false, true, false, true, false][this.face];
         if (st) {
-            this.position = [0, 0, a[0] - this.position[0]];
+            this.position = [this.position[1], 0, a[0] - this.position[0]];
             this.dir = 0;
         } else {
-            this.position = [a[0], 0, this.position[0]];
+            this.position = [a[0] - this.position[1], 0, this.position[0]];
             this.dir = 2;
         }
         this.face = [2, 0, 4, 2, 0, 4][this.face];
         this.pushWall();
+        this.jumping = false;
     } else if (this.dir === 2 && this.position[0] - dist < 0) {
-        this.currentWall.extend(this.position[0]);
+        if (!this.jumping) {
+            this.currentWall.extend(this.position[0]);
+        }
         dist = Math.abs(this.position[0] - dist);
         var st = [false, true, false, true, false, true][this.face];
         if (st) {
-            this.position = [this.position[2], 0, 0];
+            this.position = [this.position[2], 0, this.position[1]];
             this.dir = 1;
         } else {
-            this.position = [a[2] - this.position[2], 0, a[2]];
+            this.position = [a[2] - this.position[2], 0, a[2] - this.position[1]];
             this.dir = 3;
         }
         this.face = [4, 5, 0, 1, 2, 3][this.face];
         this.pushWall();
+        this.jumping = false;
     } else if (this.dir === 3 && this.position[2] - dist < 0) {
-        this.currentWall.extend(this.position[2]);
+        if (!this.jumping) {
+            this.currentWall.extend(this.position[2]);
+        }
         dist = Math.abs(this.position[2] - dist);
         var st = [false, true, false, true, false, true][this.face];
         if (st) {
-            this.position = [0, 0, this.position[0]];
+            this.position = [this.position[1], 0, this.position[0]];
             this.dir = 0;
         } else {
-            this.position = [a[0], 0, a[0] - this.position[0]];
+            this.position = [a[0] - this.position[1], 0, a[0] - this.position[0]];
             this.dir = 2;
         }
         this.face = [5, 3, 1, 5, 3, 1][this.face];
         this.pushWall();
+        this.jumping = false;
     }
 
     if (this.dir === 0) this.position[0] += dist;
@@ -677,6 +689,7 @@ CpuBike.prototype.update = function(world) {
     var cdist = wdist[this.dir];
     var rcdist = wdist[(this.dir + 1) % 4];
     var lcdist = wdist[(this.dir + 3) % 4];
+    // TODO: make cpubikes capable of jumping
     if (cdist - dist <= pika) {
         if (rcdist - dist > pika && lcdist - dist > pika) {
             var r = randint(0, 10);
