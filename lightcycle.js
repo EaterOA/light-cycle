@@ -400,14 +400,16 @@ function Bike(id, face, pos, dir) {
 }
 
 Bike.prototype.turn = function(right) {
+    if (this.jumping) {
+        return;
+    }
+
     if (right) {
         this.dir = (this.dir + 1) % 4;
     } else {
         this.dir = (this.dir + 3) % 4;
     }
-    if (!this.jumping) {
-        this.pushWall();
-    }
+    this.pushWall();
 }
 
 Bike.prototype.removeWalls = function() {
@@ -444,7 +446,7 @@ Bike.prototype.update = function(world) {
 
     // Detection collision with wall
     var wdist = this.nearestWalls();
-    if (wdist[this.dir] < dist) {
+    if (wdist[this.dir] < dist && this.position[1] < 1.5) {
         dist = wdist[this.dir];
         this.dead = true;
         playCrashSound();
