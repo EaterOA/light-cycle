@@ -924,7 +924,7 @@ function initializeGeometry() {
         model = mult(model, translate(obj.position));
         model = mult(model, rotate(360 - obj.dir * 90, [0, 1, 0]));
         if (obj.jumping) {
-            var turnAmt = obj.position[1] + obj.upvel * 0.3;
+            var turnAmt = obj.position[1] + obj.upvel * 0.15;
             model = mult(model, rotate(turnAmt, [0, 0, 1]));
         }
         model = mult(model, this.baseModel);
