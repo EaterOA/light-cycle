@@ -47,11 +47,9 @@ In free-camera mode, the controls are as follows:
 
 ## Miscellaneous Controls:
 
-* P / Spacebar - pauses/unpauses the game. No movement or camera control is
+* Esc - pauses/unpauses the game. No movement or camera control is
   allowed while the game is paused and the screen darkens to indicate this.
-* R - restarts the game
-
-The game starts off paused, which can be unpaused using P / Spacebar.
+* Enter - Starts/restarts the game
 
 ## Details:
 

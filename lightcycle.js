@@ -55,8 +55,8 @@ window.onload = function init() {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     // Start game
-    restart();
     initializeBgm();
+    controller.restart();
     requestAnimFrame(render);
 }
 
@@ -65,7 +65,6 @@ function initializeBgm() {
     if (!bgm.error) {
         bgm.volume = 0.1;
         bgm.loop = true;
-        bgm.play();
     }
 }
 
@@ -77,40 +76,6 @@ function playCrashSound() {
         sound.currentTime = 0;
         sound.play();
     }
-}
-
-function restart() {
-    // Remove existing world, if any
-    if (world) {
-        removeEventListener("keydown", world.player.controls);
-        world = undefined;
-    }
-
-    // Create game world / logic controller
-    world = new World();
-    world.addBike(PcBike);
-    world.player = world.bikes[0];
-    for (var i = 0; i < 15; i++)
-        world.addBike(CpuBike);
-    world.time = window.performance.now() / 1000;
-
-    // Remove existing camera, if any
-    if (camera) {
-        removeEventListener("keydown", camera.controls);
-        camera = undefined;
-    }
-
-    // Create camera object
-    var aspect = canvas.width / canvas.height;
-    camera = new Camera(aspect);
-
-    won = false;
-    document.getElementById("victory").style.visibility = "hidden";
-
-    // Start out game paused
-    controller.pause(false);
-    started = false;
-    controller.pause(true);
 }
 
 function Camera(aspect) {
@@ -1246,33 +1211,73 @@ function Controller() {
     addEventListener("keyup", this.keyup.bind(this));
 }
 
+Controller.prototype.start = function() {
+    document.getElementById("start").style.visibility = "hidden";
+    started = true;
+    this.pause(false);
+}
+
+Controller.prototype.restart = function() {
+    // Remove existing world, if any
+    if (world) {
+        removeEventListener("keydown", world.player.controls);
+        world = undefined;
+    }
+
+    // Create game world / logic controller
+    world = new World();
+    world.addBike(PcBike);
+    world.player = world.bikes[0];
+    for (var i = 0; i < 15; i++)
+        world.addBike(CpuBike);
+    world.time = window.performance.now() / 1000;
+
+    // Remove existing camera, if any
+    if (camera) {
+        removeEventListener("keydown", camera.controls);
+        camera = undefined;
+    }
+
+    // Create camera object
+    var aspect = canvas.width / canvas.height;
+    camera = new Camera(aspect);
+
+    won = false;
+    document.getElementById("victory").style.visibility = "hidden";
+
+    // Set up
+    document.getElementById("start").style.visibility = "visible";
+    started = false;
+
+    // Start out game paused
+    controller.pause(false);
+    controller.pause(true);
+}
+
+
 Controller.prototype.pause = function(p) {
     if (paused === p) {
         return;
     }
+    paused = !paused;
 
+    // pause
     if (paused) {
         if (started) {
-            document.getElementById("resume").style.visibility = "hidden";
-        } else {
-            document.getElementById("start").style.visibility = "hidden";
-            started = true;
+            document.getElementById("resume").style.visibility = "visible";
         }
+        if (!this.bgm.error) {
+            this.bgm.pause();
+        }
+
+    // unpause
+    } else {
+        document.getElementById("resume").style.visibility = "hidden";
         if (!this.disable_bgm && !this.bgm.error) {
             this.bgm.play();
         }
-    } else {
-        if (started) {
-            document.getElementById("resume").style.visibility = "visible";
-            if (!this.bgm.error) {
-                this.bgm.pause();
-            }
-        } else {
-            document.getElementById("start").style.visibility = "visible";
-        }
     }
 
-    paused = !paused;
     geometry.arena.texture = gl.createTexture();
     var image;
     if(!paused) {
@@ -1285,10 +1290,17 @@ Controller.prototype.pause = function(p) {
 
 Controller.prototype.keydown = function(e) {
     this.pressing[e.keyCode] = true;
-    if (e.keyCode === 80 || e.keyCode === 27 || e.keyCode == 13) { // p | esc | enter
-        this.pause(!paused);
-    } else if (e.keyCode === 82) { // r
-        restart();
+    if (e.keyCode === 27) { // esc
+        if (started) {
+            this.pause(!paused);
+        }
+    }
+    else if (e.keyCode == 13) { //  enter
+        if (!started) {
+            this.start();
+        } else {
+            this.restart();
+        }
     } else if (e.keyCode === 77) { // m
         if (this.bgm.error) {
             return;
