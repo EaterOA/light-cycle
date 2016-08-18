@@ -65,11 +65,12 @@ function initializeBgm() {
     if (!bgm.error) {
         bgm.volume = 0.1;
         bgm.loop = true;
+        bgm.play();
     }
 }
 
 function playCrashSound() {
-    var sound = document.getElementById('collision-sound');
+    var sound = document.getElementById('collision');
     if (!sound.error) {
         sound.volume = 0.5;
         sound.pause();
@@ -1266,16 +1267,10 @@ Controller.prototype.pause = function(p) {
         if (started) {
             document.getElementById("resume").style.visibility = "visible";
         }
-        if (!this.bgm.error) {
-            this.bgm.pause();
-        }
 
     // unpause
     } else {
         document.getElementById("resume").style.visibility = "hidden";
-        if (!this.disable_bgm && !this.bgm.error) {
-            this.bgm.play();
-        }
     }
 
     geometry.arena.texture = gl.createTexture();
@@ -1309,6 +1304,7 @@ Controller.prototype.keydown = function(e) {
         if (this.disable_bgm) {
             this.bgm.pause();
         } else if (!paused) {
+            this.bgm.currentTime = 0;
             this.bgm.play();
         }
     }
