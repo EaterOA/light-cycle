@@ -55,28 +55,8 @@ window.onload = function init() {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     // Start game
-    initializeBgm();
     controller.restart();
     requestAnimFrame(render);
-}
-
-function initializeBgm() {
-    var bgm = document.getElementById('bgm');
-    if (!bgm.error) {
-        bgm.volume = 0.1;
-        bgm.loop = true;
-        bgm.play();
-    }
-}
-
-function playCrashSound() {
-    var sound = document.getElementById('collision');
-    if (!sound.error) {
-        sound.volume = 0.5;
-        sound.pause();
-        sound.currentTime = 0;
-        sound.play();
-    }
 }
 
 function Camera(aspect) {
@@ -402,7 +382,7 @@ Bike.prototype.update = function(world) {
     if (wdist[this.dir] < dist && this.position[1] < 1.5) {
         dist = wdist[this.dir];
         this.dead = true;
-        playCrashSound();
+        controller.playCrashSound();
         this.removeWalls();
     }
 
@@ -1193,8 +1173,17 @@ function toggleAttrib(key, enable) {
 
 function Controller() {
     this.pressing = {};
-    this.disable_bgm = false;
+    this.disable_sound = false;
     this.bgm = document.getElementById('bgm');
+    if (!this.bgm.error) {
+        this.bgm.volume = 0.1;
+        this.bgm.loop = true;
+        this.bgm.play();
+    }
+    this.crash = document.getElementById('collision');
+    if (!this.crash.error) {
+        this.crash.volume = 0.5;
+    }
     addEventListener("keydown", this.keydown.bind(this));
     addEventListener("keyup", this.keyup.bind(this));
 }
@@ -1284,19 +1273,31 @@ Controller.prototype.keydown = function(e) {
             this.restart();
         }
     } else if (e.keyCode === 77) { // m
-        if (this.bgm.error) {
-            return;
-        }
-        this.disable_bgm = !this.disable_bgm;
-        if (this.disable_bgm) {
-            this.bgm.pause();
+        this.disable_sound = !this.disable_sound;
+        if (this.disable_sound) {
+            if (!this.bgm.error) {
+                this.bgm.pause();
+            }
+            if (!this.crash.error) {
+                this.crash.pause();
+            }
         } else if (!paused) {
-            this.bgm.currentTime = 0;
-            this.bgm.play();
+            if (!this.bgm.error) {
+                this.bgm.currentTime = 0;
+                this.bgm.play();
+            }
         }
     }
 }
 
 Controller.prototype.keyup = function(e) {
     this.pressing[e.keyCode] = false;
+}
+
+Controller.prototype.playCrashSound = function() {
+    if (!this.crash.error && !this.disable_sound) {
+        this.crash.pause();
+        this.crash.currentTime = 0;
+        this.crash.play();
+    }
 }

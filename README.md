@@ -52,7 +52,9 @@ The controls in free-camera mode are:
 
 * Esc - pauses/unpauses the game. No movement or camera control is
   allowed while the game is paused and the screen darkens to indicate this.
-* Enter - Starts/restarts the game
+* Enter - starts/restarts the game
+* M - enables/disables the bgm and collision sounds (if those resources are
+  present)
 
 ## Details:
 
