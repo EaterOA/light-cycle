@@ -93,22 +93,9 @@ function Camera(aspect) {
 }
 
 Camera.prototype.controls = function(e) {
-    var nextMode = -1;
-
-    // Switch camera mode depending on key
-    if (e.keyCode === 48) {          // 0
-        nextMode = 0;
-    } else if (e.keyCode === 49) {   // 1
-        nextMode = 1;
-    } else {
-        return;
-    }
-
-    // Retoggling current mode goes back to mode 1
-    if (nextMode === this.mode) {
-        this.mode = 1;
-    } else {
-        this.mode = nextMode;
+    // Switch camera mode
+    if (e.keyCode === 192) {    // ` (grave)
+        this.mode = (this.mode + 1) % 2;
     }
 }
 
@@ -231,22 +218,22 @@ Camera.prototype.update = function() {
         if (controller.pressing[40]) { // down
             this.position[1] += -100 * world.elapsed;
         }
-        if (controller.pressing[73]) { // w
+        if (controller.pressing[87]) { // w
             var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, -1));
             stretch(100 * world.elapsed, dir);
             this.position = add(this.position, dir.slice(0,3));
         }
-        if (controller.pressing[74]) { // a
+        if (controller.pressing[65]) { // a
             var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(-1, 0, 0));
             stretch(100 * world.elapsed, dir);
             this.position = add(this.position, dir.slice(0,3));
         }
-        if (controller.pressing[75]) { // s
+        if (controller.pressing[83]) { // s
             var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(0, 0, 1));
             stretch(100 * world.elapsed, dir);
             this.position = add(this.position, dir.slice(0,3));
         }
-        if (controller.pressing[76]) { // d
+        if (controller.pressing[68]) { // d
             var dir = transform(rotate(this.rotation[1], [0, 1, 0]), vec4(1, 0, 0));
             stretch(100 * world.elapsed, dir);
             this.position = add(this.position, dir.slice(0,3));

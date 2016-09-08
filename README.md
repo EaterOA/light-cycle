@@ -15,29 +15,32 @@ To start the game, run the index.html file in a web browser. It should
 open up the game in the window and begin moving the bike. The game gives
 control of the blue bike with a number of controls.
 
-## Movement Controls:
+## Movement:
 
 * W - speed up (maximum double default speed)
 * A - turn left (relative to current direction)
 * S - slow down (minimum half default speed)
 * D - turn right (relative to current direction)
+* Space - jump
 
-## Camera Controls:
+While jumping, you will not be able to turn nor speed up / slow down.
 
-The camera starts from a third-perspective view anchored to the bike.
+## Camera:
+
+The camera starts from a third-person-perspective view anchored to the bike.
 The controls for it are as follows:
 
-* Left arrow - Rotate camera left around bike
-* Right arrow - Rotate camera right around bike
-* Up arrow - Tilt camera upwards
+* Left arrow - rotate camera left around bike
+* Right arrow - rotate camera right around bike
+* Up arrow - tilt camera upwards
 
-It can be switched to a free-camera view which can be moved freely.
-In free-camera mode, the controls are as follows:
+You can toggle to free-camera mode and back by pressing the "`" (grave) key.
+The controls in free-camera mode are:
 
-* J - strafe left
-* L - strafe right
-* I - move forward
-* K - move backward
+* A - strafe left
+* D - strafe right
+* W - move forward
+* S - move backward
 * Up arrow - move upwards
 * Down arrow - move downwards
 * Left arrow - rotate left
@@ -45,7 +48,7 @@ In free-camera mode, the controls are as follows:
 * Z - rotate upwards
 * X - rotate downwards
 
-## Miscellaneous Controls:
+## Miscellaneous:
 
 * Esc - pauses/unpauses the game. No movement or camera control is
   allowed while the game is paused and the screen darkens to indicate this.
