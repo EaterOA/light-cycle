@@ -19,7 +19,41 @@ var wontimer = 0;
 var arenaSize = [500, 500, 500];
 var lightPos = [250, 250, 250];
 
-window.onload = function init() {
+window.onload = function() {
+    loadResources(init);
+}
+
+function loadResources(callback) {
+    var resources = {
+        bgmElement: document.getElementById('bgm'),
+        crashSoundElement: document.getElementById('crashSound'),
+        bikeModelRequest: new XMLHttpRequest(),
+    }
+    resources.bikeModelRequest.overrideMimeType("text/plain; charset=ascii");
+    resources.bikeModelRequest.open("GET", "bike.obj");
+    resources.bikeModelRequest.send();
+
+    // load resources before initializing game
+    var intervalID = window.setInterval(checkReady, 100);
+    function checkReady() {
+        var ready = true;
+        for (var r in resources) {
+            if (resources.hasOwnProperty(r)) {
+                var res = resources[r];
+                if (res.readyState != 4 && !res.error) {
+                    ready = false;
+                }
+            }
+        }
+        if (ready) {
+            window.clearInterval(intervalID);
+            callback(resources);
+        }
+        return ready;
+    }
+}
+
+function init(resources) {
     // Get HTML canvas element
     canvas = document.getElementById("gl-canvas");
 
@@ -43,10 +77,10 @@ window.onload = function init() {
     gl.useProgram(program);
 
     // Create controller handler
-    controller = new Controller();
+    controller = new Controller(resources);
 
     // Create the geometry used in World objects
-    initializeGeometry();
+    initGeometry(resources);
 
     // Other set up
     toggleAttrib("vPosition", true);
@@ -722,7 +756,7 @@ Wall.prototype.update = function(world) {
     }
 }
 
-function initializeGeometry() {
+function initGeometry(resources) {
     function convert(v) {
         var converted = [];
         for (var i = 0; i < v.length; i++) {
@@ -734,7 +768,7 @@ function initializeGeometry() {
         return converted;
     }
 
-    var geo, shape, image, xmlhttp;
+    var geo, shape, image;
 
     geometry = {};
 
@@ -825,11 +859,7 @@ function initializeGeometry() {
     }
 
     geo = geometry.bike = {};
-    xmlhttp = new XMLHttpRequest();
-    xmlhttp.overrideMimeType("text/plain; charset=ascii");
-    xmlhttp.open("GET", "bike.obj", false);
-    xmlhttp.send();
-    var m = new OBJ.Mesh(xmlhttp.responseText);
+    var m = new OBJ.Mesh(resources.bikeModelRequest.responseText);
     m.vertices = convert(m.vertices);
     m.normals = convert(m.vertexNormals);
     geo.indexBuffer = gl.createBuffer();
@@ -1171,16 +1201,16 @@ function toggleAttrib(key, enable) {
     }
 }
 
-function Controller() {
+function Controller(resources) {
     this.pressing = {};
     this.disable_sound = false;
-    this.bgm = document.getElementById('bgm');
+    this.bgm = resources.bgmElement;
     if (!this.bgm.error) {
         this.bgm.volume = 0.1;
         this.bgm.loop = true;
         this.bgm.play();
     }
-    this.crash = document.getElementById('collision');
+    this.crash = resources.crashSoundElement;
     if (!this.crash.error) {
         this.crash.volume = 0.5;
     }
