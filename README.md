@@ -1,21 +1,19 @@
-# Light Cycle
-=======
+Light Cycle
+======
 
-## Description
+Our project is an implementation of the Tron bike game, also known as Light
+Cycle. Moving bikes are placed in a cubic arena, where they are free to move
+around. As each bike moves, a wall extends from the back of the bike, which
+covers the path that the bike travels. Any collision with a wall removes the
+bike and its corresponding walls from the arena. The bike is free to move along
+the arena cube as long as it doesn't collide with a wall.
 
-Our project is an implementation of the Tron game, also known
-as Light Cycle. Moving bikes are placed in a cubic arena, where
-they are free to move around. As each bike moves, a wall extends from
-the back of the bike, which covers the path that the bike travels.
-Any collision with a wall removes the bike and its corresponding walls
-from the arena. The bike is free to move along the arena cube as long
-as it doesn't collide with a wall.
+To start the game, run the index.html file in a web browser. It should open up
+the game in the window and begin moving the bike. The game gives control of the
+blue bike with a number of controls.
 
-To start the game, run the index.html file in a web browser. It should
-open up the game in the window and begin moving the bike. The game gives
-control of the blue bike with a number of controls.
-
-## Movement:
+Movement:
+---
 
 * W - speed up (maximum double default speed)
 * A - turn left (relative to current direction)
@@ -25,7 +23,8 @@ control of the blue bike with a number of controls.
 
 While jumping, you will not be able to turn nor speed up / slow down.
 
-## Camera:
+Camera:
+---
 
 The camera starts from a third-person-perspective view anchored to the bike.
 The controls for it are as follows:
@@ -48,7 +47,8 @@ The controls in free-camera mode are:
 * Z - rotate upwards
 * X - rotate downwards
 
-## Miscellaneous:
+Miscellaneous:
+---
 
 * Esc - pauses/unpauses the game. No movement or camera control is
   allowed while the game is paused and the screen darkens to indicate this.
@@ -56,7 +56,8 @@ The controls in free-camera mode are:
 * M - enables/disables the bgm and collision sounds (if those resources are
   present)
 
-## Details:
+Details:
+---
 
 There are two main aspects of the world: the arena and the camera. The
 arena is a 500x500x500 cube which stores all of the bikes and walls.

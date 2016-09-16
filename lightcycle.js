@@ -25,13 +25,14 @@ window.onload = function() {
 
 function loadResources(callback) {
     var resources = {
-        bgmElement: document.getElementById('bgm'),
-        crashSoundElement: document.getElementById('crashSound'),
-        bikeModelRequest: new XMLHttpRequest(),
+        bgm: new Audio('resources/bgm.mp3'),
+        crashSelf: new Audio('resources/crashSelf.mp3'),
+        crashEnemy: new Audio('resources/crashEnemy.mp3'),
+        bikeModel: new XMLHttpRequest(),
     }
-    resources.bikeModelRequest.overrideMimeType("text/plain; charset=ascii");
-    resources.bikeModelRequest.open("GET", "bike.obj");
-    resources.bikeModelRequest.send();
+    resources.bikeModel.overrideMimeType("text/plain; charset=ascii");
+    resources.bikeModel.open("GET", "resources/bike.obj");
+    resources.bikeModel.send();
 
     // load resources before initializing game
     var intervalID = window.setInterval(checkReady, 100);
@@ -416,7 +417,7 @@ Bike.prototype.update = function(world) {
     if (wdist[this.dir] < dist && this.position[1] < 1.5) {
         dist = wdist[this.dir];
         this.dead = true;
-        controller.playCrashSound();
+        controller.playCrashSound(this === world.player);
         this.removeWalls();
     }
 
@@ -859,7 +860,7 @@ function initGeometry(resources) {
     }
 
     geo = geometry.bike = {};
-    var m = new OBJ.Mesh(resources.bikeModelRequest.responseText);
+    var m = new OBJ.Mesh(resources.bikeModel.responseText);
     m.vertices = convert(m.vertices);
     m.normals = convert(m.vertexNormals);
     geo.indexBuffer = gl.createBuffer();
@@ -1204,15 +1205,19 @@ function toggleAttrib(key, enable) {
 function Controller(resources) {
     this.pressing = {};
     this.disable_sound = false;
-    this.bgm = resources.bgmElement;
+    this.bgm = resources.bgm;
     if (!this.bgm.error) {
         this.bgm.volume = 0.1;
         this.bgm.loop = true;
         this.bgm.play();
     }
-    this.crash = resources.crashSoundElement;
-    if (!this.crash.error) {
-        this.crash.volume = 0.5;
+    this.crashSelf = resources.crashSelf;
+    if (!this.crashSelf.error) {
+        this.crashSelf.volume = 0.1;
+    }
+    this.crashEnemy = resources.crashEnemy;
+    if (!this.crashEnemy.error) {
+        this.crashEnemy.volume = 0.5;
     }
     addEventListener("keydown", this.keydown.bind(this));
     addEventListener("keyup", this.keyup.bind(this));
@@ -1308,8 +1313,8 @@ Controller.prototype.keydown = function(e) {
             if (!this.bgm.error) {
                 this.bgm.pause();
             }
-            if (!this.crash.error) {
-                this.crash.pause();
+            if (!this.crashSelf.error) {
+                this.crashSelf.pause();
             }
         } else if (!paused) {
             if (!this.bgm.error) {
@@ -1324,10 +1329,11 @@ Controller.prototype.keyup = function(e) {
     this.pressing[e.keyCode] = false;
 }
 
-Controller.prototype.playCrashSound = function() {
-    if (!this.crash.error && !this.disable_sound) {
-        this.crash.pause();
-        this.crash.currentTime = 0;
-        this.crash.play();
+Controller.prototype.playCrashSound = function(isPlayer) {
+    var sound = isPlayer ? this.crashSelf : this.crashEnemy;
+    if (!sound.error && !this.disable_sound) {
+        sound.pause();
+        sound.currentTime = 0;
+        sound.play();
     }
 }
